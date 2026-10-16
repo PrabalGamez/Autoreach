@@ -1,0 +1,6 @@
+{
+  "name": "autoreach",
+  "version": "0.1.0",
+  "description": "Research, draft, review and send personal outreach emails to labels, brands and collaborators. Runs locally through your Claude Code login.",
+  "author": { "name": "Prabal" }
+}

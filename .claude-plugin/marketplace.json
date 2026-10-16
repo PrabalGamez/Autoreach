@@ -1,0 +1,11 @@
+{
+  "name": "autoreach-local",
+  "owner": { "name": "Prabal" },
+  "plugins": [
+    {
+      "name": "autoreach",
+      "source": "./",
+      "description": "Local outreach app: research targets, draft personal emails, review as flashcards, send through Gmail, get alerted on offers."
+    }
+  ]
+}
