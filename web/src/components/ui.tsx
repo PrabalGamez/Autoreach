@@ -126,9 +126,18 @@ export function Select({ className, children, ...rest }: SelectHTMLAttributes<HT
 }
 
 export function Toggle({ id, checked, onChange, label }: { id: string; checked: boolean; onChange: (v: boolean) => void; label: string }) {
+  // 44px-tall hit area around a 28px track. The knob is pinned to the left edge and slides with transform only.
   return (
-    <button id={id} role="switch" aria-checked={checked} aria-label={label} onClick={() => onChange(!checked)} className={cx('relative h-6 w-11 shrink-0 rounded-full transition-colors duration-200', checked ? 'bg-moss' : 'bg-line-strong')}>
-      <span className={cx('absolute top-0.5 size-5 rounded-full bg-paper shadow transition-transform duration-200', checked ? 'translate-x-[22px]' : 'translate-x-0.5')} />
+    <button id={id} type="button" role="switch" aria-checked={checked} aria-label={label} onClick={() => onChange(!checked)} className="group -my-2 inline-flex h-11 shrink-0 items-center rounded-full">
+      <span className={cx('relative block h-7 w-12 rounded-full transition-colors duration-200', checked ? 'bg-lime' : 'bg-line-strong/70 group-hover:bg-line-strong')}>
+        <span
+          aria-hidden
+          className={cx(
+            'absolute left-1 top-1 block size-5 rounded-full shadow-[0_1px_2px_rgba(0,0,0,0.25)] transition-transform duration-200 ease-out',
+            checked ? 'translate-x-5 bg-forest-2' : 'translate-x-0 bg-paper',
+          )}
+        />
+      </span>
     </button>
   );
 }
