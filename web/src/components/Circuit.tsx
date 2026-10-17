@@ -1,4 +1,4 @@
-import { AtSign, Disc3, Mail, Music2, Radio, Send, Sparkles, Handshake } from 'lucide-react';
+import { AtSign, Briefcase, Lightbulb, Mail, Radio, Send, Sparkles, Handshake } from 'lucide-react';
 import type { ComponentType } from 'react';
 import { cx } from './ui.tsx';
 
@@ -22,8 +22,8 @@ const PULSES = [0, 4, 5];
 // Nodes sit on the traces, near the edges, so they never collide with content.
 const NODES: { x: number; y: number; Icon: ComponentType<{ className?: string }> }[] = [
   { x: 7, y: 12, Icon: Mail },
-  { x: 3.5, y: 42, Icon: Music2 },
-  { x: 6, y: 86, Icon: Disc3 },
+  { x: 3.5, y: 42, Icon: Briefcase },
+  { x: 6, y: 86, Icon: Lightbulb },
   { x: 94, y: 9, Icon: Send },
   { x: 96, y: 38, Icon: Radio },
   { x: 88, y: 90, Icon: AtSign },

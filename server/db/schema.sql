@@ -13,7 +13,7 @@ CREATE TABLE IF NOT EXISTS profile (
   voice_profile TEXT,                         -- JSON {tone,length,greeting,signoff,traits[]}
   sender_email TEXT,
   postal_address TEXT NOT NULL DEFAULT '',
-  artist_context TEXT,                        -- JSON, Claude's research on the artist
+  profile_context TEXT,                       -- JSON, Claude's research on the person or business
   context_at TEXT,
   context_skipped_at TEXT,
   onboarded_at TEXT,
@@ -35,7 +35,7 @@ CREATE TABLE IF NOT EXISTS people (
 CREATE TABLE IF NOT EXISTS targets (
   id INTEGER PRIMARY KEY,
   name TEXT NOT NULL,
-  kind TEXT NOT NULL DEFAULT 'label' CHECK (kind IN ('label','brand','collaborator','other')),
+  kind TEXT NOT NULL DEFAULT 'company' CHECK (kind IN ('company','brand','person','other')),
   domain TEXT,
   contact_email TEXT,
   contact_source_url TEXT,

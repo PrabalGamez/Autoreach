@@ -12,7 +12,7 @@ async function webOnboard(call: Awaited<ReturnType<typeof makeApp>>['call']) {
     niches: ['dubstep'],
     links: [],
     best_works: [{ title: 'Track', url: 'https://soundcloud.com/sample/private', note: '' }],
-    goals: ['signing'],
+    goals: ['deal'],
   });
   return call('POST', '/api/gmail/web', { email: ' Me.Artist@Gmail.com ' });
 }

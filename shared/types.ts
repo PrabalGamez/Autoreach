@@ -50,24 +50,28 @@ export interface Profile {
   } | null;
   sender_email: string | null;
   postal_address: string;
-  artist_context: ArtistContext | null;
+  profile_context: ProfileContext | null;
   context_at: string | null;
   context_skipped_at: string | null;
   onboarded_at: string | null;
 }
 
-/** Claude's research on the artist, built once after login + profile. */
-export interface ArtistContext {
+export const GOALS = ['deal', 'licensing', 'sponsorship', 'collaboration', 'paid work', 'press', 'job'] as const;
+export type Goal = (typeof GOALS)[number];
+
+/** Claude's research on the person or business, built once after login + profile. */
+export interface ProfileContext {
   summary: string;
-  sound: string;
+  /** What makes their work recognisable: sound, style, specialty. */
+  style: string;
   audience_stage: 'just starting' | 'emerging' | 'growing' | 'established';
   audience_reason: string;
-  releases: { title: string; url: string | null; year: string | null; note: string }[];
+  work: { title: string; url: string | null; year: string | null; note: string }[];
   platforms: { platform: string; url: string; followers: string | null; note: string }[];
-  similar_artists: string[];
+  peers: string[];
   strengths: string[];
   gaps: string[];
-  label_fit: { tier: 'reach' | 'realistic' | 'stepping stone'; examples: string[]; why: string }[];
+  fit: { tier: 'reach' | 'realistic' | 'stepping stone'; examples: string[]; why: string }[];
   facts_to_use: string[];
   uncertain: string[];
   sources: string[];
@@ -81,10 +85,13 @@ export interface ContextJob {
   error: string | null;
 }
 
+export const TARGET_KINDS = ['company', 'brand', 'person', 'other'] as const;
+export type TargetKind = (typeof TARGET_KINDS)[number];
+
 export interface Target {
   id: number;
   name: string;
-  kind: 'label' | 'brand' | 'collaborator' | 'other';
+  kind: TargetKind;
   domain: string | null;
   contact_email: string | null;
   contact_source_url: string | null;
@@ -187,7 +194,7 @@ export interface Health {
   onboarded: boolean;
   claudeCheck: { checking: boolean; stage: 'idle' | 'finding' | 'signing_in'; version: string | null };
   profileComplete: boolean;
-  /** The "ifContext" switch: true once Claude has researched the artist, so the context screen is skipped. */
+  /** The "ifContext" switch: true once Claude has researched the person, so the context screen is skipped. */
   hasContext: boolean;
   contextSkipped: boolean;
   contextJob: ContextJob;

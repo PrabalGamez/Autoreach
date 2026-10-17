@@ -12,7 +12,7 @@ import { Dashboard } from './screens/Dashboard.tsx';
 import { Settings } from './screens/Settings.tsx';
 import { OfferAlerts } from './screens/OfferAlerts.tsx';
 import { Connecting } from './screens/Connecting.tsx';
-import { ArtistContextScreen } from './screens/ArtistContext.tsx';
+import { ProfileContextScreen } from './screens/ProfileContext.tsx';
 
 const ROUTES: Route[] = ['review', 'targets', 'pipeline', 'referrals', 'dashboard', 'settings'];
 const readRoute = (): Route => {
@@ -26,7 +26,7 @@ export function App() {
   const [route, setRoute] = useState<Route>(readRoute);
   const [contextOpen, setContextOpen] = useState(false);
   const h0 = health.data;
-  // The "ifContext" switch: research the artist once, after Claude is connected and the profile is complete.
+  // The "ifContext" switch: research the person once, after Claude is connected and the profile is complete.
   const needContext = Boolean(h0?.claude?.ok && h0.profileComplete && !h0.hasContext && !h0.contextSkipped);
 
   useEffect(() => {
@@ -51,7 +51,7 @@ export function App() {
   const h = health.data;
   if (!h || !h.claude || (h.claudeCheck.checking && !h.claude.ok)) return <Connecting health={h} />;
   if (!h.claude.ok) return <Blocked health={h} onRecheck={health.reload} />;
-  if (needContext || contextOpen) return <ArtistContextScreen health={h} onHealth={health.reload} onContinue={() => (setContextOpen(false), health.reload())} />;
+  if (needContext || contextOpen) return <ProfileContextScreen health={h} onHealth={health.reload} onContinue={() => (setContextOpen(false), health.reload())} />;
   if (!h.onboarded) return <Onboarding health={h} onHealth={health.reload} onDone={() => (health.reload(), go('targets'))} />;
 
   return (

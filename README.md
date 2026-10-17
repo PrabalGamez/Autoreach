@@ -1,6 +1,6 @@
 # Autoreach
 
-Local outreach app for independent creators. It researches labels, brands and collaborators, drafts one personal email per target, lets you review drafts as flashcards, sends approved ones from your Gmail, watches for replies and alerts you when an offer arrives.
+Local outreach app for independent professionals, creators and small businesses in any field: musicians pitching labels, designers pitching studios, writers pitching publications, freelancers pitching clients. It researches companies, brands and people, drafts one personal email per target, lets you review drafts as flashcards, hands approved ones to your Gmail, reads the replies you paste in and alerts you when an offer arrives.
 
 All AI work runs through your own Claude Code install (`claude -p`), with your login and plan. There is no API key and no hosted backend. Data stays in `~/.autoreach/`; OAuth secrets live in the macOS Keychain.
 
@@ -47,7 +47,7 @@ The app only sends while the server runs. If the laptop sleeps, the queue pauses
 
 ```bash
 npm install
-npm test            # 34 tests, uses a fake `claude` and an in-memory mailbox
+npm test            # 54 tests, uses a fake `claude` and an in-memory mailbox
 npm run build       # builds the web app into dist/web
 npm run demo        # demo server on :4748 with fake Claude + fake Gmail, data in $TMPDIR/autoreach-demo
 ```

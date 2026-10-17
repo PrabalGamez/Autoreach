@@ -1,5 +1,5 @@
 import { getDb, parseJson, nowIso } from './index.ts';
-import type { Brief, Draft, Person, Profile, Target, TargetStatus } from '../../shared/types.ts';
+import { GOALS, type Brief, type Draft, type Goal, type Person, type Profile, type ProfileContext, type Target, type TargetStatus } from '../../shared/types.ts';
 
 // ---------- profile ----------
 export function getProfile(): Profile {
@@ -11,24 +11,41 @@ export function getProfile(): Profile {
     niches: parseJson(r.niches, []),
     links: parseJson(r.links, []),
     best_works: parseJson(r.best_works, []),
-    goals: parseJson(r.goals, []),
+    goals: normalizeGoals(parseJson(r.goals, [])),
     voice_samples: parseJson(r.voice_samples, []),
     voice_profile: parseJson(r.voice_profile, null),
     sender_email: r.sender_email,
     postal_address: r.postal_address ?? '',
-    artist_context: parseJson(r.artist_context, null),
+    profile_context: normalizeContext(parseJson(r.profile_context, null)),
     context_at: r.context_at ?? null,
     context_skipped_at: r.context_skipped_at ?? null,
     onboarded_at: r.onboarded_at,
   };
 }
 
-/** Profile has what the artist-context research needs. */
+const OLD_GOALS: Record<string, Goal> = { signing: 'deal', sync: 'licensing', collab: 'collaboration', 'paid gig': 'paid work' };
+/** v0.1 goals were music-only; map them onto the general set. */
+export function normalizeGoals(goals: string[]): Goal[] {
+  const out = goals.map((g) => OLD_GOALS[g] ?? g).filter((g): g is Goal => (GOALS as readonly string[]).includes(g));
+  return [...new Set(out)];
+}
+
+/** v0.1 context used music field names (sound, releases, similar_artists, label_fit). */
+export function normalizeContext(raw: Record<string, unknown> | null): ProfileContext | null {
+  if (!raw) return null;
+  const c = { ...raw } as Record<string, unknown>;
+  const rename: [string, string][] = [['sound', 'style'], ['releases', 'work'], ['similar_artists', 'peers'], ['label_fit', 'fit']];
+  for (const [from, to] of rename) if (c[to] === undefined && c[from] !== undefined) c[to] = c[from];
+  for (const [from] of rename) delete c[from];
+  return c as unknown as ProfileContext;
+}
+
+/** Profile has what the context research needs. */
 export function profileComplete(p = getProfile()) {
   return Boolean(p.alias && p.pitch && p.best_works.length);
 }
 
-const PROFILE_JSON = new Set(['niches', 'links', 'best_works', 'goals', 'voice_samples', 'voice_profile', 'artist_context']);
+const PROFILE_JSON = new Set(['niches', 'links', 'best_works', 'goals', 'voice_samples', 'voice_profile', 'profile_context']);
 const PROFILE_COLS = new Set(['alias', 'real_name', 'pitch', 'sender_email', 'postal_address', 'onboarded_at', 'context_at', 'context_skipped_at', ...PROFILE_JSON]);
 
 export function saveProfile(patch: Partial<Profile>) {
@@ -120,7 +137,7 @@ export function insertTarget(t: NewTarget): { target: Target; duplicate: boolean
     )
     .run({
       name: t.name.trim(),
-      kind: t.kind ?? 'label',
+      kind: t.kind ?? 'company',
       domain: dedupeDomain(t.domain ?? null, email),
       contact_email: email,
       contact_source_url: t.contact_source_url ?? null,

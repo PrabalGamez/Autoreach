@@ -1,14 +1,13 @@
 import { useEffect, useState } from 'react';
 import { Check, ExternalLink, Mail, Plus, Trash2 } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
-import type { Health, Profile } from '../../../shared/types.ts';
+import { GOALS, type Health, type Profile } from '../../../shared/types.ts';
 import { Button, Input, Label, LogoPill, TextArea, cx, useToast } from '../components/ui.tsx';
 import { Circuit } from '../components/Circuit.tsx';
 import { api, post, put, useApi } from '../lib/api.ts';
 import { AddTargets } from './Targets.tsx';
 
 const STEPS = ['Profile', 'Voice', 'Gmail', 'Targets'] as const;
-const GOALS = ['signing', 'sync', 'sponsorship', 'collab', 'paid gig'] as const;
 
 export function Onboarding({ health, onHealth, onDone }: { health: Health; onHealth: () => void; onDone: () => void }) {
   const profile = useApi<Profile>('/api/profile');
@@ -89,7 +88,7 @@ function ProfileStep({ profile, onSaved }: { profile: Profile; onSaved: (p: Prof
     real_name: profile.real_name,
     pitch: profile.pitch,
     niches: profile.niches.join(', '),
-    links: profile.links.length ? profile.links : [{ label: 'Spotify', url: '' }, { label: 'SoundCloud', url: '' }, { label: 'Instagram', url: '' }],
+    links: profile.links.length ? profile.links : [{ label: 'Website', url: '' }, { label: 'Portfolio', url: '' }, { label: 'LinkedIn', url: '' }],
     works: profile.best_works.length ? profile.best_works : [{ title: '', url: '', note: '' }],
     goals: profile.goals,
   });
@@ -120,7 +119,7 @@ function ProfileStep({ profile, onSaved }: { profile: Profile; onSaved: (p: Prof
     <div className="paper-card grid gap-5 p-5 md:p-7">
       <div className="grid gap-5 sm:grid-cols-2">
         <div>
-          <Label htmlFor="alias">Artist name or alias</Label>
+          <Label htmlFor="alias">Name or brand</Label>
           <Input id="alias" value={f.alias} onChange={(e) => set('alias', e.target.value)} autoComplete="nickname" />
         </div>
         <div>
@@ -134,13 +133,13 @@ function ProfileStep({ profile, onSaved }: { profile: Profile; onSaved: (p: Prof
         <Label htmlFor="pitch" hint="one line">
           Your pitch
         </Label>
-        <Input id="pitch" value={f.pitch} onChange={(e) => set('pitch', e.target.value)} placeholder="Heavy 150 BPM dubstep with metallic growls and film-score builds" />
+        <Input id="pitch" value={f.pitch} onChange={(e) => set('pitch', e.target.value)} placeholder="e.g. Product designer who fixes onboarding for fintech apps" />
       </div>
       <div>
         <Label htmlFor="niches" hint="comma separated">
-          Genres or niche
+          Field or niche
         </Label>
-        <Input id="niches" value={f.niches} onChange={(e) => set('niches', e.target.value)} placeholder="dubstep, riddim, bass music" />
+        <Input id="niches" value={f.niches} onChange={(e) => set('niches', e.target.value)} placeholder="e.g. product design, fintech, B2B SaaS" />
       </div>
       <fieldset>
         <legend className="mb-1.5 text-[14px] font-medium text-ink-2">Links</legend>
@@ -167,8 +166,8 @@ function ProfileStep({ profile, onSaved }: { profile: Profile; onSaved: (p: Prof
           {f.works.map((w, i) => (
             <div key={i} className="grid gap-2 rounded-[4px] bg-ground-2 p-3 shadow-[inset_0_0_0_1px_var(--color-line)] sm:grid-cols-2">
               <Input aria-label="Title" placeholder="Title" value={w.title} onChange={(e) => set('works', f.works.map((x, j) => (j === i ? { ...x, title: e.target.value } : x)))} />
-              <Input aria-label="URL" type="url" placeholder="https://soundcloud.com/…" value={w.url} onChange={(e) => set('works', f.works.map((x, j) => (j === i ? { ...x, url: e.target.value } : x)))} />
-              <Input aria-label="Note" className="sm:col-span-2" placeholder="Note, e.g. 150 BPM, F minor, unreleased, stems ready" value={w.note} onChange={(e) => set('works', f.works.map((x, j) => (j === i ? { ...x, note: e.target.value } : x)))} />
+              <Input aria-label="URL" type="url" placeholder="https://…" value={w.url} onChange={(e) => set('works', f.works.map((x, j) => (j === i ? { ...x, url: e.target.value } : x)))} />
+              <Input aria-label="Note" className="sm:col-span-2" placeholder="Note, e.g. client, result, date, or why it matters" value={w.note} onChange={(e) => set('works', f.works.map((x, j) => (j === i ? { ...x, note: e.target.value } : x)))} />
             </div>
           ))}
           {f.works.length < 3 && (

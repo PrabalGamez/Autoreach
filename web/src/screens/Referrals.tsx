@@ -95,13 +95,13 @@ export function Referrals({ go }: { go: (r: Route) => void }) {
               </div>
               <div>
                 <Label htmlFor="pr">How you know them</Label>
-                <Input id="pr" placeholder="Played the same night at Antisocial, Mumbai" value={f.relationship} onChange={(e) => setF({ ...f, relationship: e.target.value })} />
+                <Input id="pr" placeholder="e.g. Worked together on a project in 2025" value={f.relationship} onChange={(e) => setF({ ...f, relationship: e.target.value })} />
               </div>
               <div>
                 <Label htmlFor="pnotes" hint="who they might know">
                   Notes
                 </Label>
-                <TextArea id="pnotes" rows={3} placeholder="Signed to Circus last year, friends with their A&R" value={f.notes} onChange={(e) => setF({ ...f, notes: e.target.value })} />
+                <TextArea id="pnotes" rows={3} placeholder="e.g. Worked with their founder last year" value={f.notes} onChange={(e) => setF({ ...f, notes: e.target.value })} />
               </div>
               <Button className="justify-self-start" variant="dark" icon={<UserPlus className="size-4" />} busy={busy === 'add'} disabled={!f.name} onClick={add}>
                 Add person

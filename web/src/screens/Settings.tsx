@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Download, Loader2, Mail, RefreshCw, Trash2, Unplug } from 'lucide-react';
-import type { ArtistContext, Health, Profile } from '../../../shared/types.ts';
+import type { ProfileContext, Health, Profile } from '../../../shared/types.ts';
 import { Button, Input, Label, Section, Select, TextArea, Toggle, TwoTone, useToast } from '../components/ui.tsx';
 import { post, put, useApi } from '../lib/api.ts';
 import { GmailStep } from './Onboarding.tsx';
@@ -237,7 +237,7 @@ export function Settings({ health, onHealth }: { health: Health; onHealth: () =>
 
 function ContextSection({ health, onHealth }: { health: Health; onHealth: () => void }) {
   const toast = useToast();
-  const data = useApi<{ context: ArtistContext | null; contextAt: string | null }>('/api/artist-context');
+  const data = useApi<{ context: ProfileContext | null; contextAt: string | null }>('/api/context');
   const [note, setNote] = useState('');
   const running = health.contextJob.status === 'running';
   useEffect(() => {
@@ -246,7 +246,7 @@ function ContextSection({ health, onHealth }: { health: Health; onHealth: () => 
   const c = data.data?.context;
   const rebuild = async () => {
     try {
-      await post('/api/artist-context/build', note ? { note } : {});
+      await post('/api/context/build', note ? { note } : {});
       setNote('');
       onHealth();
     } catch (e) {
@@ -256,12 +256,12 @@ function ContextSection({ health, onHealth }: { health: Health; onHealth: () => 
   const searches = health.contextJob.activity.filter((a) => a.kind === 'search').length;
   const reads = health.contextJob.activity.filter((a) => a.kind === 'fetch').length;
   return (
-    <Section title="Artist context" aside={c && data.data?.contextAt ? <span className="text-[13px] text-ink-3">Updated {new Date(data.data.contextAt).toLocaleDateString()}</span> : undefined}>
+    <Section title="Your context" aside={c && data.data?.contextAt ? <span className="text-[13px] text-ink-3">Updated {new Date(data.data.contextAt).toLocaleDateString()}</span> : undefined}>
       {c ? (
         <div className="grid gap-3 text-[15px]">
           <p>{c.summary}</p>
           <p className="text-ink-3">
-            <span className="capitalize">{c.audience_stage}</span> · {c.sound}
+            <span className="capitalize">{c.audience_stage}</span> · {c.style}
           </p>
           {c.facts_to_use.length > 0 && (
             <ul className="list-disc pl-5 text-[14px]">

@@ -11,7 +11,7 @@ export const VoiceSchema = z.object({
 export type Voice = z.infer<typeof VoiceSchema>;
 
 const Route = z.enum(['email', 'form_only']);
-const Kind = z.enum(['label', 'brand', 'collaborator', 'other']);
+const Kind = z.enum(['company', 'brand', 'person', 'other']);
 
 export const ProposalSchema = z.object({
   proposals: z
@@ -83,17 +83,17 @@ export const IntroMatchSchema = z.object({
     .max(30),
 });
 
-export const ArtistContextSchema = z.object({
+export const ProfileContextSchema = z.object({
   summary: z.string(),
-  sound: z.string(),
+  style: z.string(),
   audience_stage: z.enum(['just starting', 'emerging', 'growing', 'established']),
   audience_reason: z.string(),
-  releases: z.array(z.object({ title: z.string(), url: z.string().nullable(), year: z.string().nullable(), note: z.string() })).max(12),
+  work: z.array(z.object({ title: z.string(), url: z.string().nullable(), year: z.string().nullable(), note: z.string() })).max(12),
   platforms: z.array(z.object({ platform: z.string(), url: z.string(), followers: z.string().nullable(), note: z.string() })).max(10),
-  similar_artists: z.array(z.string()).max(10),
+  peers: z.array(z.string()).max(10),
   strengths: z.array(z.string()).max(6),
   gaps: z.array(z.string()).max(6),
-  label_fit: z
+  fit: z
     .array(z.object({ tier: z.enum(['reach', 'realistic', 'stepping stone']), examples: z.array(z.string()).max(6), why: z.string() }))
     .max(3),
   facts_to_use: z.array(z.string()).max(10),

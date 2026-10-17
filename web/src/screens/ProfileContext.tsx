@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { AlertTriangle, ArrowRight, Check, Globe, RotateCw, Search, Wrench } from 'lucide-react';
-import type { ArtistContext as Ctx, ContextJob, Health, Profile } from '../../../shared/types.ts';
+import type { ProfileContext as Ctx, ContextJob, Health, Profile } from '../../../shared/types.ts';
 import { Button, Input, LogoPill, cx, useToast } from '../components/ui.tsx';
 import { Circuit } from '../components/Circuit.tsx';
 import { api, post, useApi } from '../lib/api.ts';
@@ -29,9 +29,9 @@ function useElapsed(since: string | null, running: boolean) {
 
 /**
  * Runs once after Claude Code is connected and the profile is complete.
- * Skipped entirely when the artist context already exists (health.hasContext, the "ifContext" switch).
+ * Skipped entirely when the context already exists (health.hasContext, the "ifContext" switch).
  */
-export function ArtistContextScreen({ health, onHealth, onContinue }: { health: Health; onHealth: () => void; onContinue: () => void }) {
+export function ProfileContextScreen({ health, onHealth, onContinue }: { health: Health; onHealth: () => void; onContinue: () => void }) {
   const toast = useToast();
   const profile = useApi<Profile>('/api/profile');
   const [ctx, setCtx] = useState<Ctx | null>(null);
@@ -46,7 +46,7 @@ export function ArtistContextScreen({ health, onHealth, onContinue }: { health: 
   const start = async (withNote?: string) => {
     try {
       setCtx(null);
-      await post('/api/artist-context/build', withNote ? { note: withNote } : {});
+      await post('/api/context/build', withNote ? { note: withNote } : {});
       setRedo(false);
       setNote('');
       onHealth();
@@ -64,11 +64,11 @@ export function ArtistContextScreen({ health, onHealth, onContinue }: { health: 
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
-    if (health.hasContext && !running) api<{ context: Ctx }>('/api/artist-context').then((r) => setCtx(r.context));
+    if (health.hasContext && !running) api<{ context: Ctx }>('/api/context').then((r) => setCtx(r.context));
   }, [health.hasContext, running]);
 
   const skip = async () => {
-    await post('/api/artist-context/skip').catch(() => {});
+    await post('/api/context/skip').catch(() => {});
     onHealth();
     onContinue();
   };
@@ -97,7 +97,7 @@ export function ArtistContextScreen({ health, onHealth, onContinue }: { health: 
                   <span className="text-cream">{alias}.</span>
                 </h1>
                 <p className="mt-6 max-w-[520px] text-[17px] leading-relaxed text-cream/80">
-                  Claude reads your links and what is public about your music, once. Every pitch after this starts from what is true about you. This usually takes 1–3 minutes.
+                  Claude reads your links and what is public about your work, once. Every pitch after this starts from what is true about you. This usually takes 1–3 minutes.
                 </p>
 
                 {running && (
@@ -142,7 +142,7 @@ export function ArtistContextScreen({ health, onHealth, onContinue }: { health: 
                     <label htmlFor="ctx-note" className="text-[14px] text-cream/80">
                       What should Claude know or fix? (optional)
                     </label>
-                    <Input id="ctx-note" value={note} onChange={(e) => setNote(e.target.value)} placeholder="That other Prabal is a different artist; my SoundCloud is the one I gave" className="border-transparent bg-cream" />
+                    <Input id="ctx-note" value={note} onChange={(e) => setNote(e.target.value)} placeholder="e.g. Someone else shares my name; only use the links I gave" className="border-transparent bg-cream" />
                     <div className="flex gap-2">
                       <Button type="submit" variant="ember" icon={<RotateCw className="size-4" />}>
                         Research again
@@ -226,11 +226,11 @@ function Result({ alias, ctx, onContinue, onRedo }: { alias: string; ctx: Ctx; o
 
       <div className="mt-10 grid gap-3 md:grid-cols-3">
         <div className="rounded-[6px] bg-forest p-5 shadow-[var(--shadow-dark)] md:col-span-2">
-          <p className="text-[13px] text-cream/70">Sound</p>
-          <p className="mt-1 text-[17px] leading-relaxed">{ctx.sound}</p>
-          {ctx.similar_artists.length > 0 && (
+          <p className="text-[13px] text-cream/70">Style</p>
+          <p className="mt-1 text-[17px] leading-relaxed">{ctx.style}</p>
+          {ctx.peers.length > 0 && (
             <div className="mt-4 flex flex-wrap gap-2">
-              {ctx.similar_artists.map((a) => (
+              {ctx.peers.map((a) => (
                 <span key={a} className="rounded-[3px] bg-white/10 px-2 py-1 text-[13px]">
                   {a}
                 </span>
@@ -254,13 +254,13 @@ function Result({ alias, ctx, onContinue, onRedo }: { alias: string; ctx: Ctx; o
                 <Check className="mt-1 size-4 shrink-0 text-moss" /> {f}
               </li>
             ))}
-            {!ctx.facts_to_use.length && <li className="text-ink-3">Nothing public to cite yet. Pitches will lean on the music itself.</li>}
+            {!ctx.facts_to_use.length && <li className="text-ink-3">Nothing public to cite yet. Pitches will lean on the work itself.</li>}
           </ul>
         </div>
         <div className="rounded-[6px] bg-forest p-5 shadow-[var(--shadow-dark)]">
           <p className="text-[15px] font-medium">Where you fit</p>
           <ul className="mt-3 grid gap-3 text-[14px]">
-            {ctx.label_fit.map((t) => (
+            {ctx.fit.map((t) => (
               <li key={t.tier}>
                 <span className="text-[12px] uppercase tracking-[0.04em] text-cream/60">{t.tier}</span>
                 <p className="mt-0.5">{t.examples.join(', ')}</p>
@@ -287,7 +287,7 @@ function Result({ alias, ctx, onContinue, onRedo }: { alias: string; ctx: Ctx; o
           )}
           {ctx.gaps.length > 0 && (
             <>
-              <p className="mt-4 text-[15px] font-medium">What labels may see as missing</p>
+              <p className="mt-4 text-[15px] font-medium">What they may see as missing</p>
               <ul className="mt-2 list-disc pl-5 text-[14px] text-cream/85">
                 {ctx.gaps.map((g) => (
                   <li key={g}>{g}</li>

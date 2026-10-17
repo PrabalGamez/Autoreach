@@ -6,7 +6,7 @@ import { ORIGIN } from '../config.ts';
 import type { OfferAlert, Terms } from '../../shared/types.ts';
 
 export const NOT_LEGAL_ADVICE =
-  'Autoreach is not legal advice. Have any contract reviewed (ideally by a music lawyer) before you sign.';
+  'Autoreach is not legal advice. Have any contract reviewed (ideally by a lawyer who knows your field) before you sign.';
 
 function desktopNotify(title: string, message: string) {
   if (process.platform !== 'darwin' || process.env.VITEST) return;

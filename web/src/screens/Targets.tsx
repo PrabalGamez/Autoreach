@@ -249,7 +249,7 @@ function AskPanel({ onAdded, proposing }: { onAdded?: () => void; proposing?: bo
   const toast = useToast();
   const [q, setQ] = useState('');
   const [busy, setBusy] = useState(false);
-  const examples = ['Heavy dubstep labels that take demos, active in the last 6 months', 'Riddim labels under 50k followers that sign first-time producers', 'Bass music YouTube channels that accept submissions'];
+  const examples = ['Companies in my niche that accept pitches, active in the last 6 months', 'Brands that sponsor or partner with people like me', 'Podcasts, newsletters or channels that feature work in my field'];
   const go = async () => {
     setBusy(true);
     try {
@@ -285,7 +285,7 @@ function AskPanel({ onAdded, proposing }: { onAdded?: () => void; proposing?: bo
           <Loader2 className="size-4 animate-spin" /> Searching the web and checking each submission route. This takes a few minutes.
         </p>
       )}
-      <p className="text-[13px] text-cream/60">Only publicly listed business or submission contacts are used. Labels that require LabelRadar or a form are marked form only and never emailed.</p>
+      <p className="text-[13px] text-cream/60">Only publicly listed business or submission contacts are used. Targets that only take pitches through a form or platform are marked form only and never emailed.</p>
     </div>
   );
 }
@@ -310,7 +310,7 @@ function ImportPanel({ onAdded }: { onAdded?: () => void }) {
   };
   return (
     <div className="grid gap-3">
-      <TextArea aria-label="CSV or pasted list" rows={6} value={text} onChange={(e) => setText(e.target.value)} placeholder={'name,contact,notes\nSome Label,demos@somelabel.com,heard them on a mix\nOther Label,https://www.labelradar.com/labels/other,form only'} className="border-transparent bg-cream font-mono text-[13px]" />
+      <TextArea aria-label="CSV or pasted list" rows={6} value={text} onChange={(e) => setText(e.target.value)} placeholder={'name,contact,notes\nSome Company,hello@somecompany.com,met at a conference\nOther Company,https://othercompany.com/apply,form only'} className="border-transparent bg-cream font-mono text-[13px]" />
       <div className="flex flex-wrap items-center gap-2">
         <input ref={file} type="file" accept=".csv,text/csv,text/plain" className="hidden" onChange={async (e) => setText(await e.target.files![0].text())} />
         <Button variant="subtle" icon={<FileUp className="size-4" />} onClick={() => file.current?.click()}>
@@ -328,7 +328,7 @@ function ImportPanel({ onAdded }: { onAdded?: () => void }) {
 function ManualPanel({ onAdded }: { onAdded?: () => void }) {
   const toast = useToast();
   const people = useApi<Person[]>('/api/people');
-  const blank = { name: '', kind: 'label', domain: '', contact_email: '', contact_source_url: '', route: 'email', form_url: '', referred_by: '', notes: '' };
+  const blank = { name: '', kind: 'company', domain: '', contact_email: '', contact_source_url: '', route: 'email', form_url: '', referred_by: '', notes: '' };
   const [f, setF] = useState(blank);
   const [busy, setBusy] = useState(false);
   const set = (k: keyof typeof blank, v: string) => setF((x) => ({ ...x, [k]: v }));
@@ -361,17 +361,17 @@ function ManualPanel({ onAdded }: { onAdded?: () => void }) {
     <div className="grid gap-3 sm:grid-cols-2">
       <Input aria-label="Name" placeholder="Name" className={dark} value={f.name} onChange={(e) => set('name', e.target.value)} />
       <Select aria-label="Kind" className={dark} value={f.kind} onChange={(e) => set('kind', e.target.value)}>
-        <option value="label">Label</option>
+        <option value="company">Company</option>
         <option value="brand">Brand</option>
-        <option value="collaborator">Collaborator</option>
+        <option value="person">Person</option>
         <option value="other">Other</option>
       </Select>
       <Select aria-label="How they take pitches" className={dark} value={f.route} onChange={(e) => set('route', e.target.value)}>
         <option value="email">They list a business email</option>
-        <option value="form_only">Form / LabelRadar / SubmitHub only</option>
+        <option value="form_only">Form or platform only (e.g. LabelRadar, an application portal)</option>
       </Select>
       {f.route === 'email' ? (
-        <Input aria-label="Public business email" type="email" placeholder="demos@label.com" className={dark} value={f.contact_email} onChange={(e) => set('contact_email', e.target.value)} />
+        <Input aria-label="Public business email" type="email" placeholder="hello@company.com" className={dark} value={f.contact_email} onChange={(e) => set('contact_email', e.target.value)} />
       ) : (
         <Input aria-label="Submission form URL" type="url" placeholder="https://www.labelradar.com/labels/…" className={dark} value={f.form_url} onChange={(e) => set('form_url', e.target.value)} />
       )}

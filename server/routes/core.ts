@@ -2,9 +2,10 @@ import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import { FAKE_GMAIL, ORIGIN } from '../config.ts';
 import { getDb, getSettings, saveSettings, pauseInfo, unpause, getState, setState, DEFAULT_SETTINGS } from '../db/index.ts';
-import { getProfile, profileComplete, saveProfile } from '../db/repo.ts';
+import { getProfile, normalizeGoals, profileComplete, saveProfile } from '../db/repo.ts';
+import { GOALS } from '../../shared/types.ts';
 import { cachedClaudeHealth, checkClaude, claudeCheckState, ensureClaudeChecked } from '../claude/health.ts';
-import { contextJob, hasContext, skipContext, startContextJob } from '../artistContext.ts';
+import { contextJob, hasContext, skipContext, startContextJob } from '../profileContext.ts';
 import { queueDepth } from '../claude/runner.ts';
 import { extractVoice } from '../claude/tasks.ts';
 import { buildAuthUrl, disconnect, handleCallback, hasClient, isConnected, saveClient, sendMode } from '../gmail/oauth.ts';
@@ -25,7 +26,7 @@ const ProfileBody = z.object({
   niches: z.array(z.string().max(40)).min(1).max(10),
   links: z.array(Link).max(8),
   best_works: z.array(Work).min(1).max(3),
-  goals: z.array(z.enum(['signing', 'sync', 'sponsorship', 'collab', 'paid gig'])).min(1),
+  goals: z.array(z.string()).min(1).transform((g) => normalizeGoals(g)).pipe(z.array(z.enum(GOALS)).min(1, 'Pick at least one goal')),
   postal_address: z.string().max(300).default(''),
 }).partial();
 
@@ -64,19 +65,19 @@ export async function coreRoutes(app: FastifyInstance) {
     return healthPayload();
   });
 
-  // ---- artist context ----
-  app.get('/api/artist-context', async () => {
+  // ---- profile context ----
+  app.get('/api/context', async () => {
     const p = getProfile();
-    return { hasContext: hasContext(), context: p.artist_context, contextAt: p.context_at, skipped: Boolean(p.context_skipped_at), job: contextJob() };
+    return { hasContext: hasContext(), context: p.profile_context, contextAt: p.context_at, skipped: Boolean(p.context_skipped_at), job: contextJob() };
   });
-  app.post('/api/artist-context/build', async (req, reply) => {
+  app.post('/api/context/build', async (req, reply) => {
     if (!cachedClaudeHealth()?.ok) return reply.code(409).send({ error: 'Claude Code is not connected yet.' });
     const { note } = z.object({ note: z.string().max(400).optional() }).parse(req.body ?? {});
     const r = startContextJob(note || undefined);
     if (!r.started && r.reason !== 'Already running') return reply.code(400).send({ error: r.reason });
     return { job: contextJob() };
   });
-  app.post('/api/artist-context/skip', async () => {
+  app.post('/api/context/skip', async () => {
     skipContext();
     return healthPayload();
   });

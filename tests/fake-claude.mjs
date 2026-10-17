@@ -51,19 +51,19 @@ if (props.includes('audience_stage')) {
     console.log(JSON.stringify({ type: 'result', is_error: true, result: 'fake-claude: research failed' }));
     process.exit(1);
   }
-  const alias = (stdin.match(/^Name \/ alias: ([^(\n]+)/m) ?? [])[1]?.trim() ?? 'Artist';
+  const alias = (stdin.match(/^Name \/ brand: ([^(\n]+)/m) ?? [])[1]?.trim() ?? 'Someone';
   await out(
     {
       summary: `${alias} is an independent producer making heavy dubstep, with a small but active SoundCloud presence.`,
-      sound: 'Metallic growl basses, half-time drums at 150 BPM, cinematic build-ups.',
+      style: 'Metallic growl basses, half-time drums at 150 BPM, cinematic build-ups.',
       audience_stage: 'emerging',
       audience_reason: 'A handful of public uploads, no label releases found yet.',
-      releases: [{ title: 'Sample Track', url: 'https://soundcloud.com/sample/private', year: '2026', note: 'Unreleased, shared privately' }],
+      work: [{ title: 'Sample Track', url: 'https://soundcloud.com/sample/private', year: '2026', note: 'Unreleased, shared privately' }],
       platforms: [{ platform: 'SoundCloud', url: 'https://soundcloud.com/sample', followers: null, note: 'Follower count not visible' }],
-      similar_artists: ['Sample Artist One', 'Sample Artist Two'],
+      peers: ['Sample Artist One', 'Sample Artist Two'],
       strengths: ['Clear, consistent heavy sound', 'Finished, mastered tracks ready to send'],
       gaps: ['No released catalogue yet', 'Little press or DJ support to point to'],
-      label_fit: [
+      fit: [
         { tier: 'reach', examples: ['Sample Big Label'], why: 'Signs heavy 150 BPM records, but mostly from established artists' },
         { tier: 'realistic', examples: ['Sample Bass Label A'], why: 'Regularly signs first-time producers' },
         { tier: 'stepping stone', examples: ['Sample Promo Channel'], why: 'Builds plays and proof before label pitches' },
@@ -88,8 +88,8 @@ if (props.includes('typical_length'))
 if (props.includes('proposals'))
   await out({
     proposals: [
-      { name: 'Sample Bass Label A', kind: 'label', domain: 'samplebass-a.test', contact_email: 'demos@samplebass-a.test', contact_source_url: 'https://samplebass-a.test/contact', route: 'email', form_url: null, why_fit: 'Releases heavy 150 BPM dubstep from new producers.', sources: ['https://samplebass-a.test'] },
-      { name: 'Sample Riddim Label B', kind: 'label', domain: 'riddim-b.test', contact_email: null, contact_source_url: null, route: 'form_only', form_url: 'https://www.labelradar.com/labels/riddim-b', why_fit: 'Riddim-leaning label that only takes LabelRadar demos.', sources: ['https://riddim-b.test/demos'] },
+      { name: 'Sample Bass Label A', kind: 'company', domain: 'samplebass-a.test', contact_email: 'demos@samplebass-a.test', contact_source_url: 'https://samplebass-a.test/contact', route: 'email', form_url: null, why_fit: 'Releases heavy 150 BPM dubstep from new producers.', sources: ['https://samplebass-a.test'] },
+      { name: 'Sample Riddim Label B', kind: 'company', domain: 'riddim-b.test', contact_email: null, contact_source_url: null, route: 'form_only', form_url: 'https://www.labelradar.com/labels/riddim-b', why_fit: 'Riddim-leaning label that only takes LabelRadar demos.', sources: ['https://riddim-b.test/demos'] },
     ],
   });
 

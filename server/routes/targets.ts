@@ -14,15 +14,17 @@ import { sendMode } from '../gmail/oauth.ts';
 import { handleReply } from '../gmail/watch.ts';
 import { getSettings } from '../db/index.ts';
 import type { ReviewCard, Target, TargetStatus } from '../../shared/types.ts';
-import { PIPELINE_STATUSES } from '../../shared/types.ts';
+import { PIPELINE_STATUSES, TARGET_KINDS } from '../../shared/types.ts';
 
-const Kind = z.enum(['label', 'brand', 'collaborator', 'other']);
+const Kind = z.enum(TARGET_KINDS);
+/** Accepts v0.1 kind names from old CSVs. */
+const parseKind = (k: string | undefined): Target['kind'] => (k === 'label' ? 'company' : k === 'collaborator' ? 'person' : (Kind.safeParse(k).data ?? 'company'));
 const optUrl = z.string().url().nullable().optional().or(z.literal('').transform(() => null));
 const optEmail = z.string().email().nullable().optional().or(z.literal('').transform(() => null));
 
 const ManualTarget = z.object({
   name: z.string().min(1).max(120),
-  kind: Kind.default('label'),
+  kind: z.string().optional().transform((k) => parseKind(k)),
   domain: z.string().max(200).nullable().optional(),
   contact_email: optEmail,
   contact_source_url: optUrl,
@@ -83,7 +85,7 @@ export function importRows(text: string) {
     }
     const res = insertTarget({
       name,
-      kind: (Kind.safeParse(r[idx('kind')]).data ?? 'label') as Target['kind'],
+      kind: parseKind(r[idx('kind')]),
       domain,
       contact_email: isEmail ? contact : null,
       route: isEmail ? 'email' : 'form_only',

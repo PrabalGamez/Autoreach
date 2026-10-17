@@ -2,7 +2,7 @@ import { resetDbForTests } from '../server/db/index.ts';
 import { buildApp } from '../server/app.ts';
 import { fakeGmail } from '../server/gmail/api.ts';
 import { checkClaude, resetHealthForTests } from '../server/claude/health.ts';
-import { resetContextJobForTests } from '../server/artistContext.ts';
+import { resetContextJobForTests } from '../server/profileContext.ts';
 
 export const TOKEN = 'a'.repeat(48);
 export const HOSTHDR = '127.0.0.1:4799';
@@ -53,7 +53,7 @@ export async function onboard(call: Awaited<ReturnType<typeof makeApp>>['call'])
     niches: ['dubstep', 'riddim'],
     links: [{ label: 'SoundCloud', url: 'https://soundcloud.com/sample' }],
     best_works: [{ title: 'Sample Track', url: 'https://soundcloud.com/sample/private', note: 'unreleased' }],
-    goals: ['signing'],
+    goals: ['deal'],
   });
   await call('GET', '/oauth/google/callback?fake=1');
   return call('POST', '/api/onboarding/complete');

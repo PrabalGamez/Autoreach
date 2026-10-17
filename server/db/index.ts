@@ -18,13 +18,40 @@ export function openDb(file = DB_PATH): Database.Database {
   return db;
 }
 
+/**
+ * v0.1 target kinds were label/brand/collaborator/other. SQLite cannot change a CHECK constraint,
+ * so the table is rebuilt from schema.sql with label -> company and collaborator -> person.
+ */
+function migrateTargetKinds(d: Database.Database) {
+  const row = d.prepare("SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'targets'").get() as { sql: string } | undefined;
+  if (!row || !row.sql.includes("'label'")) return;
+  const schema = fs.readFileSync(path.join(here, 'schema.sql'), 'utf8');
+  const ddl = schema.match(/CREATE TABLE IF NOT EXISTS targets \(([\s\S]*?)\n\);/)![0].replace('CREATE TABLE IF NOT EXISTS targets', 'CREATE TABLE targets_new');
+  const cols = (d.prepare('PRAGMA table_info(targets)').all() as { name: string }[]).map((c) => c.name);
+  const select = cols.map((c) => (c === 'kind' ? "CASE kind WHEN 'label' THEN 'company' WHEN 'collaborator' THEN 'person' ELSE kind END" : c)).join(', ');
+  d.pragma('foreign_keys = OFF');
+  d.transaction(() => {
+    d.exec(ddl);
+    d.exec(`INSERT INTO targets_new (${cols.join(', ')}) SELECT ${select} FROM targets`);
+    d.exec('DROP TABLE targets');
+    d.exec('ALTER TABLE targets_new RENAME TO targets');
+    d.exec('CREATE UNIQUE INDEX IF NOT EXISTS ux_target_email ON targets(lower(contact_email)) WHERE contact_email IS NOT NULL');
+    d.exec('CREATE UNIQUE INDEX IF NOT EXISTS ux_target_domain ON targets(lower(domain)) WHERE domain IS NOT NULL');
+  })();
+  d.pragma('foreign_keys = ON');
+}
+
 /** Columns added after the first release. CREATE TABLE IF NOT EXISTS does not add them to old databases. */
 const ADDED_COLUMNS: [table: string, column: string, ddl: string][] = [
-  ['profile', 'artist_context', 'TEXT'],
+  ['profile', 'profile_context', 'TEXT'],
   ['profile', 'context_at', 'TEXT'],
   ['profile', 'context_skipped_at', 'TEXT'],
 ];
 export function migrate(d: Database.Database) {
+  const profileCols = (d.prepare('PRAGMA table_info(profile)').all() as { name: string }[]).map((c) => c.name);
+  // v0.1 was music-only: artist_context became profile_context.
+  if (profileCols.includes('artist_context') && !profileCols.includes('profile_context')) d.exec('ALTER TABLE profile RENAME COLUMN artist_context TO profile_context');
+  migrateTargetKinds(d);
   for (const [table, column, ddl] of ADDED_COLUMNS) {
     const cols = d.prepare(`PRAGMA table_info(${table})`).all() as { name: string }[];
     if (!cols.some((c) => c.name === column)) d.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${ddl}`);
