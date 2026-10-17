@@ -9,7 +9,7 @@ All AI work runs through your own Claude Code install (`claude -p`), with your l
 In Claude Code:
 
 ```bash
-claude plugin marketplace add PrabalGamez/autoreach
+claude plugin marketplace add PrabalGamez/Autoreach
 claude plugin install autoreach@autoreach
 ```
 
