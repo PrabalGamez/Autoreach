@@ -80,7 +80,7 @@ export function ProfileContextScreen({ health, onHealth, onContinue }: { health:
 
   return (
     <div className="satin relative min-h-dvh overflow-hidden text-cream">
-      <Circuit dark />
+      <Circuit dark nodes={false} />
       <div className="relative mx-auto max-w-[1180px] px-4 pb-20 pt-5 md:px-6">
         <LogoPill />
 

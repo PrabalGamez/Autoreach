@@ -61,7 +61,7 @@ export function OfferAlerts({ onChange, go, sender }: { onChange: () => void; go
 
   return (
     <div id="offer-dialog" role="alertdialog" aria-modal="true" aria-labelledby="offer-title" aria-describedby="offer-summary" className="fixed inset-0 z-[60] overflow-y-auto bg-forest-2 text-cream">
-      <Circuit dark />
+      <Circuit dark nodes={false} />
       <motion.div key={a.id} initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.45, ease: [0.2, 0.7, 0.2, 1] }} className="relative mx-auto max-w-[980px] px-4 py-10 md:px-6 md:py-16">
         <div className="flex flex-wrap items-center gap-3">
           <motion.span initial={{ scale: 0.6 }} animate={{ scale: [0.6, 1.15, 1] }} transition={{ duration: 0.6 }} className="grid size-11 place-items-center rounded-[6px] bg-ember text-white">
