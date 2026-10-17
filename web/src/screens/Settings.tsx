@@ -20,6 +20,7 @@ interface S {
   alert_email: boolean;
   alert_desktop: boolean;
   offer_confidence: number;
+  compact_research: boolean;
 }
 
 const MODELS = ['sonnet', 'opus', 'haiku'];
@@ -202,6 +203,13 @@ export function Settings({ health, onHealth }: { health: Health; onHealth: () =>
                   </Select>
                 </div>
               ))}
+            </div>
+            <div className="mt-4 flex items-center justify-between gap-4 rounded-[4px] bg-ground-2 p-3 shadow-[inset_0_0_0_1px_var(--color-line)]">
+              <div>
+                <p className="text-[15px] font-medium">Caveman mode for research</p>
+                <p className="text-[13px] text-ink-3">Claude writes briefs, research and reply summaries in compressed style to use fewer tokens. Emails always stay in normal English.</p>
+              </div>
+              <Toggle id="cm" label="Caveman mode for research" checked={s.compact_research} onChange={(v) => setS({ ...s, compact_research: v })} />
             </div>
             <p className="mt-3 text-[13px] text-ink-3">
               Runs through Claude Code {health.claude?.version} with your login. Usage counts against your Claude plan.

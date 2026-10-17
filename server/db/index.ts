@@ -128,6 +128,8 @@ export const DEFAULT_SETTINGS = {
   alert_email: true,
   alert_desktop: true,
   offer_confidence: 0.6,
+  /** Caveman-style compressed text for Claude's internal research. Emails are never compressed. */
+  compact_research: true,
 };
 export type Settings = typeof DEFAULT_SETTINGS;
 

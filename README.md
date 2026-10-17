@@ -20,7 +20,7 @@ You review every draft like a flashcard, it opens in your Gmail, and you press S
   <img alt="Local-first" src="https://img.shields.io/badge/data-stays_on_your_Mac-142A1E">
   <img alt="No API key" src="https://img.shields.io/badge/API_key-not_needed-142A1E">
   <img alt="Node 20+" src="https://img.shields.io/badge/node-20%2B-142A1E?logo=nodedotjs&logoColor=white">
-  <img alt="Tests" src="https://img.shields.io/badge/tests-54_passing-9FE870?labelColor=142A1E">
+  <img alt="Tests" src="https://img.shields.io/badge/tests-56_passing-9FE870?labelColor=142A1E">
 </p>
 
 <br>
@@ -130,7 +130,7 @@ If you'd rather have Autoreach send on its own (2–6 minutes apart, inside the 
 
 ```bash
 npm install
-npm test        # 54 tests with a fake `claude` and an in-memory mailbox
+npm test        # 56 tests with a fake `claude` and an in-memory mailbox
 npm run build   # builds the web app into dist/web
 npm run demo    # demo on :4748 with fake Claude and fake Gmail
 ```

@@ -139,6 +139,7 @@ export async function coreRoutes(app: FastifyInstance) {
         send_mode: z.enum(['gmail_web', 'gmail_api']),
         alert_desktop: z.boolean(),
         offer_confidence: z.number().min(0.3).max(0.95),
+        compact_research: z.boolean(),
       })
       .partial()
       .parse(req.body) as Partial<typeof DEFAULT_SETTINGS>;
