@@ -7,7 +7,7 @@ export const cx = (...c: (string | false | null | undefined)[]) => c.filter(Bool
 // ---------- Mark & logo ----------
 export function Mark({ size = 20, className = '' }: { size?: number; className?: string }) {
   return (
-    <span className={cx('inline-grid place-items-center rounded-[4px] bg-ink text-cream', className)} style={{ width: size, height: size }} aria-hidden>
+    <span className={cx('inline-grid place-items-center rounded-[5px] bg-forest-2 text-lime', className)} style={{ width: size, height: size }} aria-hidden>
       <svg viewBox="0 0 20 20" width={size * 0.62} height={size * 0.62} fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
         <path d="M5 15 15 5M8 5h7v7" />
       </svg>
@@ -19,7 +19,7 @@ export function LogoPill({ onClick }: { onClick?: () => void }) {
   return (
     <button onClick={onClick} className="flex h-9 w-fit items-center gap-2 rounded-[4px] bg-paper pl-1.5 pr-3 shadow-[0_0_0_1px_rgba(0,0,0,0.06),0_1px_2px_rgba(0,0,0,0.08)] transition-transform duration-150 active:scale-[0.98]" aria-label="Autoreach home">
       <Mark size={24} />
-      <span className="text-[15px] font-medium tracking-[-0.02em] text-ink">autoreach.</span>
+      <span className="font-[family-name:var(--font-display)] text-[16px] font-bold tracking-[-0.03em] text-ink">autoreach.</span>
     </button>
   );
 }
@@ -27,7 +27,7 @@ export function LogoPill({ onClick }: { onClick?: () => void }) {
 // ---------- Buttons ----------
 type Variant = 'primary' | 'light' | 'dark' | 'ghost' | 'danger' | 'ember' | 'onDark' | 'subtle';
 const variants: Record<Variant, string> = {
-  primary: 'bg-moss text-cream shadow-[var(--shadow-btn)] hover:bg-moss-2',
+  primary: 'bg-lime text-forest-2 font-semibold shadow-[inset_0_-2px_0_rgba(0,0,0,0.12),0_1px_2px_rgba(0,0,0,0.12)] hover:bg-lime-2',
   light: 'bg-paper text-ink shadow-[0_0_0_1px_rgba(0,0,0,0.08),0_1px_2px_rgba(0,0,0,0.08)] hover:bg-ground-2',
   dark: 'bg-forest text-cream shadow-[var(--shadow-btn)] hover:bg-forest-3',
   ghost: 'bg-transparent text-ink-2 hover:bg-black/5',
@@ -91,7 +91,7 @@ export function Badge({ tone = 'neutral', children, className }: { tone?: 'neutr
   const tones = {
     neutral: 'bg-ground-2 text-ink-2 shadow-[0_0_0_1px_var(--color-line)]',
     warm: 'bg-ember text-white',
-    good: 'bg-leaf/15 text-[#235a36]',
+    good: 'bg-lime text-forest-2',
     bad: 'bg-alarm/12 text-[#8e2626]',
     dark: 'bg-white/10 text-cream',
     form: 'bg-sun text-[#3d3005]',
@@ -185,7 +185,7 @@ export function Section({ title, aside, children, className }: { title: ReactNod
   return (
     <section className={cx('paper-card p-5 md:p-6', className)}>
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-        <h2 className="text-[17px] font-medium tracking-[-0.02em]">{title}</h2>
+        <h2 className="headline text-[20px]">{title}</h2>
         {aside}
       </div>
       {children}

@@ -46,7 +46,7 @@ export function Dashboard() {
                 <t.Icon className="size-3.5" aria-hidden />
               </span>
             </div>
-            <p className="mt-4 text-[40px] leading-none tracking-[-0.04em]">{t.value}</p>
+            <p className={cx('headline mt-4 text-[48px] leading-none', t.hot ? 'text-ember' : 'text-lime')}>{t.value}</p>
             <p className="mt-3 inline-flex rounded-[3px] bg-white/10 px-2 py-1 text-[12px] text-cream/80">{t.sub}</p>
           </motion.div>
         ))}

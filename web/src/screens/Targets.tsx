@@ -49,7 +49,7 @@ export function Targets({ go }: { go: (r: Route) => void }) {
       <AnimatePresence>
         {proposed.length > 0 && (
           <motion.section initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="grid gap-3">
-            <h2 className="text-[20px] font-medium tracking-[-0.02em]">
+            <h2 className="headline text-[22px]">
               Proposals <span className="text-hush">· approve or reject each one</span>
             </h2>
             <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
@@ -63,7 +63,7 @@ export function Targets({ go }: { go: (r: Route) => void }) {
 
       <section className="grid gap-3">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <h2 className="text-[20px] font-medium tracking-[-0.02em]">All targets</h2>
+          <h2 className="headline text-[22px]">All targets</h2>
           <div className="relative w-full sm:w-72">
             <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-ink-3" aria-hidden />
             <Input aria-label="Search targets" className="pl-9" placeholder="Search" value={q} onChange={(e) => setQ(e.target.value)} />
@@ -269,7 +269,7 @@ function AskPanel({ onAdded, proposing }: { onAdded?: () => void; proposing?: bo
           Describe who you want to reach
         </label>
         <input id="ask" value={q} onChange={(e) => setQ(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && q.length > 4 && go()} placeholder="Describe who you want to reach" className="h-12 min-w-0 flex-1 rounded-[4px] bg-cream px-4 text-[15px] text-ink placeholder:text-ink-3 focus:outline-none focus:ring-2 focus:ring-ember" />
-        <Button variant="ember" size="lg" onClick={go} busy={busy} disabled={q.length < 5 || proposing} icon={<Sparkles className="size-4" />}>
+        <Button variant="primary" size="lg" onClick={go} busy={busy} disabled={q.length < 5 || proposing} icon={<Sparkles className="size-4" />}>
           {proposing ? 'Researching…' : 'Find targets'}
         </Button>
       </div>

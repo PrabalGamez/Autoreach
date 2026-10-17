@@ -48,33 +48,34 @@ export function Shell({ route, go, health, onHealth, children }: { route: Route;
         </div>
       )}
 
-      <header className="sticky top-0 z-30 bg-ground/90 backdrop-blur-[2px]" style={health.paused.paused ? { top: 48 } : undefined}>
+      <header className="on-dark sticky top-0 z-30 bg-forest-2 text-cream shadow-[0_1px_0_rgba(255,255,255,0.06),0_8px_24px_-12px_rgba(0,0,0,0.5)]" style={health.paused.paused ? { top: 48 } : undefined}>
         <div className="mx-auto flex h-16 max-w-[1400px] items-center gap-3 px-4 md:px-6">
           <LogoPill onClick={() => go('review')} />
-          <nav aria-label="Main" className="ml-2 hidden items-center gap-1 lg:flex">
+          <nav aria-label="Main" className="ml-3 hidden items-center gap-1 rounded-[8px] bg-white/[0.06] p-1 lg:flex">
             {NAV.map((n) => (
               <button
                 key={n.id}
                 onClick={() => go(n.id)}
                 aria-current={route === n.id ? 'page' : undefined}
-                className={cx('h-9 rounded-[4px] px-3 text-[14px] transition-colors duration-150', route === n.id ? 'bg-forest text-cream' : 'text-ink-2 hover:bg-black/5')}
+                className={cx('relative h-9 rounded-[6px] px-3.5 text-[14px] font-medium transition-colors duration-150', route === n.id ? 'text-forest-2' : 'text-cream/75 hover:text-cream')}
               >
-                {n.label}
+                {route === n.id && <motion.span layoutId="nav-active" className="absolute inset-0 rounded-[6px] bg-lime" transition={{ type: 'spring', stiffness: 500, damping: 38 }} />}
+                <span className="relative">{n.label}</span>
               </button>
             ))}
           </nav>
           <div className="ml-auto flex items-center gap-2">
             <QueueChip health={health} />
-            <button className="grid size-10 place-items-center rounded-[4px] bg-moss text-cream shadow-[var(--shadow-btn)] lg:hidden" aria-label={open ? 'Close menu' : 'Open menu'} aria-expanded={open} onClick={() => setOpen((o) => !o)}>
+            <button className="grid size-11 place-items-center rounded-[6px] bg-lime text-forest-2 lg:hidden" aria-label={open ? 'Close menu' : 'Open menu'} aria-expanded={open} onClick={() => setOpen((o) => !o)}>
               {open ? <X className="size-4" /> : <Menu className="size-4" />}
             </button>
           </div>
         </div>
         <AnimatePresence>
           {open && (
-            <motion.nav initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }} transition={{ duration: 0.18 }} aria-label="Main" className="mx-4 mb-3 grid gap-1 rounded-[6px] bg-paper p-2 shadow-[0_0_0_1px_rgba(0,0,0,0.06),var(--shadow-card)] lg:hidden">
+            <motion.nav initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }} transition={{ duration: 0.18 }} aria-label="Main" className="mx-4 mb-3 grid gap-1 rounded-[8px] bg-white/[0.06] p-2 lg:hidden">
               {NAV.map((n) => (
-                <button key={n.id} onClick={() => (go(n.id), setOpen(false))} className={cx('h-11 rounded-[4px] px-3 text-left text-[15px]', route === n.id ? 'bg-forest text-cream' : 'hover:bg-black/5')}>
+                <button key={n.id} onClick={() => (go(n.id), setOpen(false))} className={cx('h-11 rounded-[6px] px-3 text-left text-[15px] font-medium', route === n.id ? 'bg-lime text-forest-2' : 'text-cream/80 hover:bg-white/10')}>
                   {n.label}
                 </button>
               ))}
@@ -83,7 +84,13 @@ export function Shell({ route, go, health, onHealth, children }: { route: Route;
         </AnimatePresence>
       </header>
 
-      <main className="mx-auto max-w-[1400px] px-4 pb-24 pt-4 md:px-6 md:pt-8">{children}</main>
+      <main className="mx-auto max-w-[1400px] px-4 pb-24 pt-6 md:px-6 md:pt-10">
+        <AnimatePresence mode="wait" initial={false}>
+          <motion.div key={route} initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} transition={{ duration: 0.22, ease: [0.2, 0.7, 0.2, 1] }}>
+            {children}
+          </motion.div>
+        </AnimatePresence>
+      </main>
     </div>
   );
 }
@@ -94,25 +101,25 @@ function QueueChip({ health }: { health: Health }) {
   return (
     <div className="hidden items-center gap-2 sm:flex">
       {working > 0 && (
-        <span className="flex h-9 items-center gap-2 rounded-[4px] bg-paper px-3 text-[13px] text-ink-2 shadow-[0_0_0_1px_rgba(0,0,0,0.06)]">
+        <span className="flex h-9 items-center gap-2 rounded-[6px] bg-white/[0.08] px-3 text-[13px] text-cream/85">
           <span className="relative flex size-2">
-            <span className="absolute inline-flex size-full animate-ping rounded-full bg-leaf opacity-60 motion-reduce:hidden" />
-            <span className="relative inline-flex size-2 rounded-full bg-leaf" />
+            <span className="absolute inline-flex size-full animate-ping rounded-full bg-lime opacity-60 motion-reduce:hidden" />
+            <span className="relative inline-flex size-2 rounded-full bg-lime" />
           </span>
           Claude working · {working}
         </span>
       )}
-      <span className="flex h-9 items-center gap-2 rounded-[4px] bg-paper px-3 text-[13px] text-ink-2 shadow-[0_0_0_1px_rgba(0,0,0,0.06)]" title="Sent today / daily cap">
+      <span className="flex h-9 items-center gap-2 rounded-[6px] bg-white/[0.08] px-3 text-[13px] text-cream/85" title="Sent today / daily cap">
         <Send className="size-3.5" aria-hidden />
         {q.sentToday}/{q.cap} today
         {q.queued > 0 && (
           <>
-            <span className="text-line-strong">·</span>
+            <span className="text-cream/40">·</span>
             <Clock className="size-3.5" aria-hidden /> {q.queued} queued
           </>
         )}
       </span>
-      {health.fakeGmail && <span className="flex h-9 items-center rounded-[4px] bg-sun/50 px-3 text-[13px] font-medium text-[#5a4708]">Demo mailbox</span>}
+      {health.fakeGmail && <span className="flex h-9 items-center rounded-[4px] bg-sun px-3 text-[13px] font-medium text-[#3d3005]">Demo mailbox</span>}
     </div>
   );
 }

@@ -72,7 +72,7 @@ export function Referrals({ go }: { go: (r: Route) => void }) {
     <div className="grid gap-6">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <TwoTone a="Referrals" b="warm beats cold" className="text-[40px] md:text-[56px]" />
-        <Button variant="ember" icon={<Sparkles className="size-4" />} busy={busy === 'suggest' || matching} onClick={suggest}>
+        <Button variant="primary" icon={<Sparkles className="size-4" />} busy={busy === "suggest" || matching} onClick={suggest}>
           {matching ? 'Matching…' : 'Suggest intros'}
         </Button>
       </div>

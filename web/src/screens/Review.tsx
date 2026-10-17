@@ -190,7 +190,7 @@ export function Review({ onChange, go, mode }: { onChange: () => void; go: (r: R
             <span>{mode === 'gmail_web' ? 'You press Send in Gmail for each one' : 'Nothing sends without your approval'}</span>
           </div>
           <div className="h-1.5 overflow-hidden rounded-full bg-line" role="progressbar" aria-valuemin={0} aria-valuemax={total} aria-valuenow={reviewed} aria-label="Review progress">
-            <div className="h-full bg-moss transition-[width] duration-300" style={{ width: total ? `${(reviewed / total) * 100}%` : '0%' }} />
+            <div className="h-full bg-forest transition-[width] duration-300" style={{ width: total ? `${(reviewed / total) * 100}%` : '0%' }} />
           </div>
         </div>
       </div>
@@ -351,7 +351,7 @@ function Context({ card }: { card: ReviewCard }) {
       <div className="flex items-start gap-3">
         <Monogram name={t?.name ?? '?'} domain={t?.domain} size={48} dark />
         <div className="min-w-0 flex-1">
-          <p className="text-[24px] leading-tight tracking-[-0.03em]">{t?.name ?? 'Unknown'}</p>
+          <p className="headline text-[28px]">{t?.name ?? "Unknown"}</p>
           <p className="mt-0.5 text-[13px] text-cream/70">
             <span className="capitalize">{t?.kind}</span> {t?.domain ? `· ${t.domain}` : ''}
           </p>
