@@ -9,7 +9,6 @@ import { AddTargets } from './Targets.tsx';
 
 const STEPS = ['Profile', 'Voice', 'Gmail', 'Targets'] as const;
 const GOALS = ['signing', 'sync', 'sponsorship', 'collab', 'paid gig'] as const;
-const EXPECTED_SENDER = 'you@gmail.com';
 
 export function Onboarding({ health, onHealth, onDone }: { health: Health; onHealth: () => void; onDone: () => void }) {
   const profile = useApi<Profile>('/api/profile');
@@ -315,7 +314,6 @@ function GmailStep({ health, onHealth, onNext }: { health: Health; onHealth: () 
   }, [onHealth]);
 
   if (g.connected) {
-    const mismatch = g.email && g.email.replace(/\./g, '').split('@')[0] !== EXPECTED_SENDER.split('@')[0];
     return (
       <div className="dark-card on-dark grid gap-5 p-6 md:p-8">
         <span className="grid size-10 place-items-center rounded-[4px] bg-leaf text-white">
@@ -324,7 +322,7 @@ function GmailStep({ health, onHealth, onNext }: { health: Health; onHealth: () 
         <div>
           <p className="text-[13px] text-cream/70">Sending as</p>
           <p className="mt-1 text-[28px] tracking-[-0.03em]">{g.email}</p>
-          {mismatch && <p className="mt-2 text-[14px] text-sun">That is not {EXPECTED_SENDER}. Disconnect in Settings if you meant to use that address.</p>}
+          <p className="mt-2 text-[14px] text-cream/70">Wrong account? Disconnect in Settings and connect again.</p>
         </div>
         <p className="text-[14px] text-cream/70">Autoreach can send from and read replies in this inbox. Nothing is sent until you approve each email.</p>
         <div className="flex flex-wrap gap-2">
@@ -374,7 +372,7 @@ function GmailStep({ health, onHealth, onNext }: { health: Health; onHealth: () 
               <Label htmlFor="csec">Client secret</Label>
               <Input id="csec" type="password" value={secret} onChange={(e) => setSecret(e.target.value)} placeholder={g.hasClient ? '••••••••' : 'GOCSPX-…'} autoComplete="off" />
             </div>
-            <p className="text-[13px] text-ink-3">Both are stored in your macOS Keychain, never in a file. Sign in with {EXPECTED_SENDER} on the Google screen and tick both Gmail boxes.</p>
+            <p className="text-[13px] text-ink-3">Both are stored in your macOS Keychain, never in a file. Sign in with the Gmail you want to send from and tick both Gmail boxes.</p>
             {g.error && <p className="text-[14px] text-alarm">{g.error}</p>}
             <Button size="lg" className="justify-self-end" onClick={saveAndConnect} busy={busy === 'connect'} disabled={!g.hasClient && (!clientId || !secret)}>
               Connect Gmail

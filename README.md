@@ -4,6 +4,17 @@ Local outreach app for independent creators. It researches labels, brands and co
 
 All AI work runs through your own Claude Code install (`claude -p`), with your login and plan. There is no API key and no hosted backend. Data stays in `~/.autoreach/`; OAuth secrets live in the macOS Keychain.
 
+## Install
+
+In Claude Code:
+
+```bash
+claude plugin marketplace add PrabalGamez/autoreach
+claude plugin install autoreach@autoreach
+```
+
+Restart Claude Code, then run `/autoreach`. The first launch installs dependencies and builds the app, which takes a minute. Needs Node 20+ and a signed-in terminal `claude`.
+
 ## Use
 
 In Claude Code:

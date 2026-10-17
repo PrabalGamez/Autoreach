@@ -1,6 +1,8 @@
 {
-  "name": "autoreach-local",
-  "owner": { "name": "Prabal" },
+  "name": "autoreach",
+  "owner": {
+    "name": "Prabal"
+  },
   "plugins": [
     {
       "name": "autoreach",
