@@ -8,7 +8,11 @@ import { proposeTargets, matchIntros, draftIntroRequest } from '../claude/tasks.
 import { background, isBusy, regenerateDraft, researchAndDraft } from '../pipeline.ts';
 import { checkDraft, withOptOut } from '../quality.ts';
 import { isSuppressed, suppress, suppressContact } from '../compliance.ts';
-import { enqueue } from '../jobs/scheduler.ts';
+import { enqueue, sentToday } from '../jobs/scheduler.ts';
+import { handOffToGmail } from '../gmail/send.ts';
+import { sendMode } from '../gmail/oauth.ts';
+import { handleReply } from '../gmail/watch.ts';
+import { getSettings } from '../db/index.ts';
 import type { ReviewCard, Target, TargetStatus } from '../../shared/types.ts';
 import { PIPELINE_STATUSES } from '../../shared/types.ts';
 
@@ -193,6 +197,20 @@ export async function targetRoutes(app: FastifyInstance) {
     return t;
   });
 
+  /** Paste a reply you got in Gmail. Claude reads it: offers raise the alert, opt-outs are honoured. */
+  app.post('/api/targets/:id/reply', async (req, reply) => {
+    const id = Number((req.params as { id: string }).id);
+    const t = getTarget(id);
+    if (!t) return reply.code(404).send({ error: 'Not found' });
+    const { text } = z.object({ text: z.string().trim().min(2).max(20000) }).parse(req.body);
+    const last = getDb().prepare("SELECT subject FROM messages WHERE target_id = ? ORDER BY id DESC LIMIT 1").get(id) as { subject: string } | undefined;
+    const info = getDb()
+      .prepare('INSERT INTO replies (thread_id, target_id, from_email, received_at, snippet, body) VALUES (?, ?, ?, ?, ?, ?)')
+      .run(`manual-${id}`, id, t.contact_email, new Date().toISOString(), text.slice(0, 140), text);
+    await handleReply(Number(info.lastInsertRowid), last?.subject ?? '');
+    return getDb().prepare('SELECT id, label, confidence, summary FROM replies WHERE id = ?').get(Number(info.lastInsertRowid));
+  });
+
   /** Manual opt-out (e.g. they asked by phone). Permanent. */
   app.post('/api/targets/:id/opt-out', async (req) => {
     const id = Number((req.params as { id: string }).id);
@@ -248,6 +266,18 @@ export async function targetRoutes(app: FastifyInstance) {
     } else {
       if (!t?.contact_email) return reply.code(400).send({ error: 'No contact email for this target.' });
       if (isSuppressed(t.contact_email, t.domain)) return reply.code(409).send({ error: 'This contact opted out.' });
+    }
+    if (sendMode() === 'gmail_web') {
+      // Same checks as automatic sending, then hand the email to Gmail's compose window. You press Send there.
+      if (sentToday() >= getSettings().daily_cap) return reply.code(409).send({ error: `Daily limit reached (${getSettings().daily_cap}). It protects your sender reputation; change it in Settings.` });
+      setDraftState(id, 'approved');
+      try {
+        const { url, to } = handOffToGmail(id);
+        return { draft: getDraft(id), composeUrl: url, to };
+      } catch (e) {
+        getDb().prepare("UPDATE drafts SET state = 'pending', approved_at = NULL WHERE id = ?").run(id);
+        return reply.code(409).send({ error: (e as Error).message });
+      }
     }
     setDraftState(id, 'approved');
     enqueue(id);

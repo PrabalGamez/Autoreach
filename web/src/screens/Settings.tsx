@@ -2,7 +2,8 @@ import { useEffect, useState } from 'react';
 import { Download, Loader2, Mail, RefreshCw, Trash2, Unplug } from 'lucide-react';
 import type { ArtistContext, Health, Profile } from '../../../shared/types.ts';
 import { Button, Input, Label, Section, Select, TextArea, Toggle, TwoTone, useToast } from '../components/ui.tsx';
-import { api, post, put, useApi } from '../lib/api.ts';
+import { post, put, useApi } from '../lib/api.ts';
+import { GmailStep } from './Onboarding.tsx';
 
 interface S {
   daily_cap: number;
@@ -108,36 +109,22 @@ export function Settings({ health, onHealth }: { health: Health; onHealth: () =>
 
         <div className="grid content-start gap-4">
           <Section title="Gmail">
-            <div className="grid gap-3">
-              <p className="text-[15px]">
-                {health.gmail.connected ? (
-                  <>
-                    Sending as <strong className="font-medium">{health.gmail.email}</strong>
-                  </>
-                ) : (
-                  'Not connected'
-                )}
-              </p>
-              {health.gmail.error && <p className="text-[14px] text-alarm">{health.gmail.error}</p>}
-              <div className="flex flex-wrap gap-2">
-                {health.gmail.connected ? (
-                  <>
-                    <Button variant="light" size="sm" icon={<Mail className="size-4" />} busy={busy === 'test'} onClick={() => run('test', () => post('/api/gmail/test'), 'Test email sent.')}>
-                      Send test
-                    </Button>
-                    <Button variant="light" size="sm" icon={<RefreshCw className="size-4" />} onClick={() => run('poll', () => post('/api/gmail/poll'), 'Checking for replies.')}>
-                      Check replies now
-                    </Button>
-                    <Button variant="ghost" size="sm" icon={<Unplug className="size-4" />} onClick={() => confirm('Disconnect Gmail? Sending and reply checks stop.') && run('dc', () => post('/api/gmail/disconnect'), 'Disconnected.')}>
-                      Disconnect
-                    </Button>
-                  </>
-                ) : (
-                  <Button size="sm" onClick={async () => (window.location.href = (await api<{ url: string }>('/api/gmail/auth-url')).url)}>
-                    Reconnect Gmail
+            <div className="grid gap-4">
+              <GmailStep health={health} onHealth={onHealth} />
+              {health.gmail.mode === 'gmail_api' && health.gmail.connected && (
+                <div className="flex flex-wrap gap-2">
+                  <Button variant="light" size="sm" icon={<Mail className="size-4" />} busy={busy === 'test'} onClick={() => run('test', () => post('/api/gmail/test'), 'Test email sent.')}>
+                    Send test
                   </Button>
-                )}
-              </div>
+                  <Button variant="light" size="sm" icon={<RefreshCw className="size-4" />} onClick={() => run('poll', () => post('/api/gmail/poll'), 'Checking for replies.')}>
+                    Check replies now
+                  </Button>
+                  <Button variant="ghost" size="sm" icon={<Unplug className="size-4" />} onClick={() => confirm('Turn off automatic sending? You go back to opening each email in Gmail.') && run('dc', () => post('/api/gmail/disconnect'), 'Back to sending with Gmail.')}>
+                    Turn off automatic
+                  </Button>
+                </div>
+              )}
+              {health.gmail.error && <p className="text-[14px] text-alarm">{health.gmail.error}</p>}
               <div>
                 <Label htmlFor="addr" hint="optional footer on outreach emails">
                   Postal address
@@ -155,7 +142,7 @@ export function Settings({ health, onHealth }: { health: Health; onHealth: () =>
           <Section title="Offer alerts" aside={<Button size="sm" variant="light" busy={busy === 'a'} onClick={() => run('a', () => put('/api/settings', s), 'Saved.')}>Save</Button>}>
             <div className="grid gap-3">
               <div className="flex items-center justify-between gap-4">
-                <span className="text-[15px]">Email me ("🔥 Autoreach: offer from …")</span>
+                <span className="text-[15px]">Email me ("🔥 Autoreach: offer from …") <span className="text-ink-3">· automatic mode only</span></span>
                 <Toggle id="ae" label="Email alerts" checked={s.alert_email} onChange={(v) => setS({ ...s, alert_email: v })} />
               </div>
               <div className="flex items-center justify-between gap-4">

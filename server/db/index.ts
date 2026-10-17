@@ -81,7 +81,12 @@ export function pauseInfo() {
 }
 
 // ---- settings ----
+export type SendMode = 'gmail_web' | 'gmail_api';
+
 export const DEFAULT_SETTINGS = {
+  /** gmail_web: open each approved email in Gmail's compose window, you press Send. No setup, nothing stored.
+   *  gmail_api: send and watch replies automatically through your own Google OAuth client. */
+  send_mode: 'gmail_web' as SendMode,
   daily_cap: 25,
   gap_min_minutes: 2,
   gap_max_minutes: 6,
@@ -104,6 +109,7 @@ export function getSettings(): Settings {
   const out: Record<string, unknown> = { ...DEFAULT_SETTINGS };
   for (const r of rows) if (r.key in DEFAULT_SETTINGS) out[r.key] = parseJson(r.value, out[r.key]);
   const s = out as Settings;
+  if (s.send_mode !== 'gmail_api') s.send_mode = 'gmail_web';
   s.daily_cap = Math.max(1, Math.min(HARD_DAILY_CAP, Math.round(s.daily_cap)));
   s.gap_min_minutes = Math.max(1, s.gap_min_minutes);
   s.gap_max_minutes = Math.max(s.gap_min_minutes, s.gap_max_minutes);

@@ -2,6 +2,7 @@ import { getDb } from '../db/index.ts';
 import { getDraft, getProfile, getTarget, setDraftState, setTargetStatus } from '../db/repo.ts';
 import { canSend } from '../compliance.ts';
 import { gmail } from './api.ts';
+import { composeUrl } from './compose.ts';
 
 function encodeHeader(v: string) {
   return /^[\x20-\x7e]*$/.test(v) ? v : `=?UTF-8?B?${Buffer.from(v, 'utf8').toString('base64')}?=`;
@@ -79,9 +80,16 @@ export async function sendDraft(draftId: number) {
   } catch {
     /* non-fatal */
   }
+  recordSent(d.id, check.to, { gmailId: res.id, rfcId, threadId: res.threadId });
+  return res;
+}
+
+/** Bookkeeping after an email leaves (automatic mode) or is handed to Gmail's compose window (web mode). */
+export function recordSent(draftId: number, to: string, ids: { gmailId: string | null; rfcId: string | null; threadId: string | null }) {
+  const d = getDraft(draftId)!;
   getDb()
     .prepare('INSERT INTO messages (draft_id, target_id, person_id, channel, gmail_message_id, rfc_message_id, thread_id, to_email, subject) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)')
-    .run(d.id, d.target_id, d.person_id, 'gmail', res.id, rfcId, res.threadId, check.to, d.subject);
+    .run(d.id, d.target_id, d.person_id, 'gmail', ids.gmailId, ids.rfcId, ids.threadId, to, d.subject);
   getDb().prepare('DELETE FROM send_queue WHERE draft_id = ?').run(d.id);
   setDraftState(d.id, 'sent');
   if (d.target_id && (d.kind === 'initial' || d.kind === 'followup')) {
@@ -91,7 +99,21 @@ export async function sendDraft(draftId: number) {
   if (d.kind === 'intro_request' && d.person_id && d.target_id) {
     getDb().prepare("UPDATE referral_outcomes SET stage = 'asked', updated_at = datetime('now') WHERE person_id = ? AND target_id = ? AND stage = 'suggested'").run(d.person_id, d.target_id);
   }
-  return res;
+}
+
+/**
+ * Gmail web mode: run every send check, record the email as sent, and return the Gmail compose link.
+ * The person presses Send in Gmail themselves.
+ */
+export function handOffToGmail(draftId: number): { url: string; to: string } {
+  const check = canSend(draftId);
+  if (!check.ok || !check.to) throw new Error(check.reason ?? 'Blocked');
+  const d = getDraft(draftId)!;
+  const p = getProfile();
+  if (!p.sender_email) throw new Error('Add your Gmail address first.');
+  const body = d.body + (d.kind === 'initial' || d.kind === 'followup' ? footer(p.postal_address) : '');
+  recordSent(d.id, check.to, { gmailId: null, rfcId: null, threadId: null });
+  return { url: composeUrl({ from: p.sender_email, to: check.to, subject: d.subject, body }), to: check.to };
 }
 
 /** Alert email from you to you. */

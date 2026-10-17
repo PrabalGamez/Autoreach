@@ -1,7 +1,7 @@
 import { getDb, getSettings, getState, setState, pauseInfo, pause, type Settings } from '../db/index.ts';
 import { getDraft, getTarget, setDraftState } from '../db/repo.ts';
 import { sendDraft } from '../gmail/send.ts';
-import { GmailAuthError, isConnected } from '../gmail/oauth.ts';
+import { GmailAuthError, apiConnected, isConnected } from '../gmail/oauth.ts';
 import { safePoll } from '../gmail/watch.ts';
 import { createDueFollowups } from '../pipeline.ts';
 import { checkClaude } from '../claude/health.ts';
@@ -112,10 +112,13 @@ async function loop() {
       if (!h.ok) pause(`Claude Code: ${h.error ?? 'unavailable'}`);
     }
     if (pauseInfo().paused || !isConnected()) return;
-    await sendTick();
-    if (now - lastPoll > s.poll_minutes * 60_000) {
-      lastPoll = now;
-      await safePoll();
+    // Automatic mode only: send the queue and watch the inbox. Gmail web mode hands each email to Gmail instead.
+    if (s.send_mode === 'gmail_api' && apiConnected()) {
+      await sendTick();
+      if (now - lastPoll > s.poll_minutes * 60_000) {
+        lastPoll = now;
+        await safePoll();
+      }
     }
     if (s.followups_enabled && now - lastFollowups > 60 * 60_000) {
       lastFollowups = now;

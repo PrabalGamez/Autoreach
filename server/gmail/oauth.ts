@@ -1,7 +1,7 @@
 import crypto from 'node:crypto';
 import { GMAIL_SCOPES, OAUTH_REDIRECT, FAKE_GMAIL } from '../config.ts';
 import { getSecret, setSecret, deleteSecret } from '../secrets.ts';
-import { getState, setState, pause, nowIso } from '../db/index.ts';
+import { getState, setState, pause, nowIso, getSettings, getDb } from '../db/index.ts';
 
 export class GmailAuthError extends Error {}
 
@@ -17,8 +17,20 @@ export function hasClient() {
   return FAKE_GMAIL || Boolean(getSecret('google_client_id') && getSecret('google_client_secret'));
 }
 
-export function isConnected() {
+/** Automatic mode only: an OAuth refresh token is stored. */
+export function apiConnected() {
   return FAKE_GMAIL ? getState('fake_gmail_connected') === '1' : Boolean(getSecret('google_refresh_token'));
+}
+
+export const sendMode = () => getSettings().send_mode;
+
+/** Ready to send in the current mode. Gmail web mode only needs the address. */
+export function isConnected() {
+  if (sendMode() === 'gmail_web') {
+    const r = getDb().prepare('SELECT sender_email FROM profile WHERE id = 1').get() as { sender_email: string | null } | undefined;
+    return Boolean(r?.sender_email);
+  }
+  return apiConnected();
 }
 
 export function buildAuthUrl(): string {

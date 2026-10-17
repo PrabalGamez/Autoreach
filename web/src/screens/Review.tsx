@@ -10,7 +10,7 @@ type Exit = 'approve' | 'skip' | 'discard' | null;
 const words = (s: string) => s.trim().split(/\s+/).filter(Boolean).length;
 const KIND_LABEL = { initial: 'First email', followup: 'Follow-up', intro_request: 'Intro request', reply: 'Reply to offer' } as const;
 
-export function Review({ onChange, go }: { onChange: () => void; go: (r: Route) => void }) {
+export function Review({ onChange, go, mode }: { onChange: () => void; go: (r: Route) => void; mode: 'gmail_web' | 'gmail_api' }) {
   const toast = useToast();
   const [deck, setDeck] = useState<ReviewCard[] | null>(null);
   const [reviewed, setReviewed] = useState(0);
@@ -20,6 +20,7 @@ export function Review({ onChange, go }: { onChange: () => void; go: (r: Route) 
   const [regenNote, setRegenNote] = useState('');
   const [busy, setBusy] = useState<string | null>(null);
   const [draftEdit, setDraftEdit] = useState<{ subject: string; body: string } | null>(null);
+  const [handedOff, setHandedOff] = useState<{ url: string; to: string; opened: boolean } | null>(null);
   const subjectRef = useRef<HTMLInputElement>(null);
   const regenRef = useRef<HTMLInputElement>(null);
 
@@ -67,18 +68,31 @@ export function Review({ onChange, go }: { onChange: () => void; go: (r: Route) 
   const approve = async () => {
     if (!card || !draftEdit || busy) return;
     const formOnly = card.target?.route === 'form_only' && card.draft.kind !== 'intro_request';
+    // Gmail web mode: open the window now, inside the key press or click, so the browser does not block it.
+    const gmailWin = !formOnly && mode === 'gmail_web' ? window.open('about:blank', '_blank') : null;
     setBusy('approve');
     try {
       if (formOnly) {
         await navigator.clipboard.writeText(`${draftEdit.subject}\n\n${draftEdit.body}`).catch(() => {});
       }
-      const r = await post<{ formUrl?: string }>(`/api/drafts/${card.draft.id}/approve`, draftEdit);
+      const r = await post<{ formUrl?: string; composeUrl?: string }>(`/api/drafts/${card.draft.id}/approve`, draftEdit);
       if (formOnly) {
         if (r.formUrl) window.open(r.formUrl, '_blank', 'noopener');
         toast(`Copied. Paste it into ${card.target?.name}'s form.`, 'good');
+      } else if (r.composeUrl) {
+        let opened = false;
+        if (gmailWin) {
+          gmailWin.opener = null;
+          gmailWin.location.href = r.composeUrl;
+          opened = true;
+        } else opened = Boolean(window.open(r.composeUrl, '_blank', 'noopener'));
+        // Keep a link on screen in case a popup blocker stopped the window.
+        setHandedOff({ url: r.composeUrl, to: card.to ?? '', opened });
+        toast(opened ? 'Opened in Gmail. Check it and press Send.' : 'Your browser blocked the Gmail window. Use the link above the card.', opened ? 'good' : 'error');
       } else toast(`Approved. Queued to ${card.to}.`, 'good');
       advance('approve');
     } catch (e) {
+      gmailWin?.close();
       toast((e as Error).message, 'error');
     } finally {
       setBusy(null);
@@ -173,7 +187,7 @@ export function Review({ onChange, go }: { onChange: () => void; go: (r: Route) 
             <span>
               {reviewed} of {total} reviewed
             </span>
-            <span>Nothing sends without your approval</span>
+            <span>{mode === 'gmail_web' ? 'You press Send in Gmail for each one' : 'Nothing sends without your approval'}</span>
           </div>
           <div className="h-1.5 overflow-hidden rounded-full bg-line" role="progressbar" aria-valuemin={0} aria-valuemax={total} aria-valuenow={reviewed} aria-label="Review progress">
             <div className="h-full bg-moss transition-[width] duration-300" style={{ width: total ? `${(reviewed / total) * 100}%` : '0%' }} />
@@ -181,9 +195,26 @@ export function Review({ onChange, go }: { onChange: () => void; go: (r: Route) 
         </div>
       </div>
 
+      {handedOff && (
+        <div className="flex flex-wrap items-center gap-3 rounded-[6px] bg-forest px-4 py-3 text-[14px] text-cream" role="status">
+          <span className="min-w-0 flex-1">
+            {handedOff.opened ? 'Email to ' : 'Gmail did not open for '}
+            <strong className="font-medium">{handedOff.to}</strong>
+            {handedOff.opened ? ' is open in Gmail. Press Send there.' : '.'}
+          </span>
+          <a href={handedOff.url} target="_blank" rel="noreferrer" className="inline-flex h-9 items-center rounded-[4px] bg-cream px-3 text-[13px] font-medium text-ink hover:bg-white">
+            {handedOff.opened ? "Didn't open? Open it" : 'Open it in Gmail'}
+          </a>
+          <button aria-label="Dismiss" className="grid size-9 place-items-center rounded-[4px] text-cream/70 hover:bg-white/10" onClick={() => setHandedOff(null)}>
+            ×
+          </button>
+        </div>
+      )}
+
       {!card ? (
         <Empty title="Nothing to review right now" action={<Button onClick={() => go('targets')}>Add targets</Button>}>
-          New drafts appear here as Claude finishes research. Approved emails go out slowly, 2–6 minutes apart.
+          New drafts appear here as Claude finishes research.{' '}
+          {mode === 'gmail_web' ? 'Each one you approve opens in Gmail for you to send.' : 'Approved emails go out slowly, 2–6 minutes apart.'}
         </Empty>
       ) : (
         <AnimatePresence mode="wait" custom={exit}>
@@ -261,6 +292,8 @@ export function Review({ onChange, go }: { onChange: () => void; go: (r: Route) 
                     <>
                       <Copy className="size-4" /> Copy &amp; open form
                     </>
+                  ) : mode === 'gmail_web' ? (
+                    'Open in Gmail'
                   ) : (
                     'Approve'
                   )}

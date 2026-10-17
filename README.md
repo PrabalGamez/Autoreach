@@ -27,13 +27,14 @@ The app only sends while the server runs. If the laptop sleeps, the queue pauses
 
 ## One-time setup
 
-1. **Claude Code in the terminal must be signed in.** Run `claude` in Terminal and use `/login`. The desktop app login does not cover the terminal CLI. Autoreach shows a blocking screen until this works.
-2. **Gmail OAuth client.** Onboarding walks you through it: create a Google Cloud project, enable the Gmail API, set the consent screen to External and **publish it to "In production"** (in "Testing", Google expires the sign-in every 7 days), then create a **Desktop app** OAuth client and paste its ID and secret into Autoreach. Scopes are `gmail.send` and `gmail.readonly`.
+1. **Claude Code in the terminal must be signed in.** Run `claude auth login` (or `claude`, then `/login`). The desktop app login does not cover the terminal CLI. Autoreach shows a connecting screen, and a blocking screen until this works.
+2. **Your Gmail address. That's it.** By default Autoreach never touches your inbox and stores no passwords or tokens. Each email you approve opens in Gmail's compose window, already written, and you press Send. When someone replies, press "Log reply" on that target and paste it; Claude reads it, flags offers and honours opt-outs. "Check Gmail for replies" opens one Gmail search covering everyone you pitched.
+3. **Optional: automatic mode.** If you want Autoreach to send on its own and watch replies, open "Advanced" on the Gmail step and connect your own Google OAuth client (Desktop app type, `gmail.send` + `gmail.readonly`, published "In production"). Secrets go in the macOS Keychain.
 
 ## Safety rules built in
 
 - Nothing sends without an explicit approval on its own flashcard. There is no bulk approve.
-- Sends are throttled: 2–6 minute random gaps, 25 a day by default, hard cap 50, inside the recipient's business hours when their timezone is known.
+- A daily cap applies in both modes (25 by default, hard cap 50). Automatic mode also spaces sends 2–6 minutes apart, inside the recipient's business hours when their timezone is known.
 - Form-only targets (LabelRadar, SubmitHub, web forms) are never emailed. Approving copies the text and opens the form for you.
 - Opt-outs are permanent. A reply asking not to be contacted (detected in code and by Claude) adds the email and domain to a suppression list that survives "Delete everything".
 - At most one follow-up per target, drafted for review, never auto-sent.

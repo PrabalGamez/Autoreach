@@ -24,7 +24,8 @@ export async function raiseOfferAlert(replyId: number) {
   const errors: string[] = [];
   const name = a.target_name ?? a.from_email ?? 'unknown sender';
 
-  if (s.alert_email) {
+  // Web mode has no Gmail access, so the alert email layer is skipped there.
+  if (s.alert_email && s.send_mode === 'gmail_api') {
     const t = a.terms;
     const body = [
       `${name} replied with what looks like an offer.`,

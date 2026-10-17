@@ -17,9 +17,9 @@ export function Onboarding({ health, onHealth, onDone }: { health: Health; onHea
   useEffect(() => {
     const p = profile.data;
     if (!p) return;
-    // Resume where the person left off.
-    if (p.alias && p.best_works.length) setStep((s) => Math.max(s, p.voice_profile ? 2 : 1));
-  }, [profile.data]);
+    // Resume where the person left off. Voice is optional, so a set Gmail address means it was done or skipped.
+    if (p.alias && p.best_works.length) setStep((s) => Math.max(s, health.gmail.connected ? 3 : p.voice_profile ? 2 : 1));
+  }, [profile.data]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     window.scrollTo({ top: 0 });
@@ -278,60 +278,64 @@ function VoiceStep({ profile, onSaved, onSkip }: { profile: Profile; onSaved: (p
 }
 
 // ---------- Step 3 ----------
-function GmailStep({ health, onHealth, onNext }: { health: Health; onHealth: () => void; onNext: () => void }) {
-  const toast = useToast();
-  const [clientId, setClientId] = useState('');
-  const [secret, setSecret] = useState('');
-  const [busy, setBusy] = useState<string | null>(null);
-  const g = health.gmail;
+const gmailCompose = (from: string, to: string, subject: string, body: string) =>
+  `https://mail.google.com/mail/?authuser=${encodeURIComponent(from)}&view=cm&fs=1&tf=1&to=${encodeURIComponent(to)}&su=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
 
-  const saveAndConnect = async () => {
-    setBusy('connect');
+/** Default: just the Gmail address. Approved emails open in Gmail already written; you press Send. */
+export function GmailStep({ health, onHealth, onNext }: { health: Health; onHealth: () => void; onNext?: () => void }) {
+  const toast = useToast();
+  const g = health.gmail;
+  const [email, setEmail] = useState(g.email ?? '');
+  const [editing, setEditing] = useState(!g.connected);
+  const [busy, setBusy] = useState(false);
+
+  const save = async () => {
+    setBusy(true);
     try {
-      if (!health.fakeGmail && (clientId || !g.hasClient)) await post('/api/gmail/client', { clientId: clientId.trim(), clientSecret: secret.trim() });
-      const { url } = await api<{ url: string }>('/api/gmail/auth-url');
-      window.location.href = url;
-    } catch (e) {
-      toast((e as Error).message, 'error');
-      setBusy(null);
-    }
-  };
-  const test = async () => {
-    setBusy('test');
-    try {
-      await post('/api/gmail/test');
-      toast(`Test email sent to ${g.email}. Check your inbox.`, 'good');
+      await post('/api/gmail/web', { email });
+      onHealth();
+      setEditing(false);
     } catch (e) {
       toast((e as Error).message, 'error');
     } finally {
-      setBusy(null);
+      setBusy(false);
     }
   };
 
-  useEffect(() => {
-    const id = setInterval(onHealth, 3000);
-    return () => clearInterval(id);
-  }, [onHealth]);
-
-  if (g.connected) {
+  if (g.connected && !editing) {
     return (
       <div className="dark-card on-dark grid gap-5 p-6 md:p-8">
         <span className="grid size-10 place-items-center rounded-[4px] bg-leaf text-white">
           <Check className="size-5" />
         </span>
         <div>
-          <p className="text-[13px] text-cream/70">Sending as</p>
-          <p className="mt-1 text-[28px] tracking-[-0.03em]">{g.email}</p>
-          <p className="mt-2 text-[14px] text-cream/70">Wrong account? Disconnect in Settings and connect again.</p>
+          <p className="text-[13px] text-cream/70">Sending from</p>
+          <p className="mt-1 break-all text-[28px] tracking-[-0.03em]">{g.email}</p>
         </div>
-        <p className="text-[14px] text-cream/70">Autoreach can send from and read replies in this inbox. Nothing is sent until you approve each email.</p>
+        <p className="text-[15px] text-cream/80">
+          {g.mode === 'gmail_api'
+            ? 'Automatic mode: approved emails send on their own, 2–6 minutes apart, and replies are checked for you.'
+            : 'Each email you approve opens in Gmail, already written. Check it and press Send. Autoreach never sees your password or your inbox.'}
+        </p>
         <div className="flex flex-wrap gap-2">
-          <Button variant="light" onClick={test} busy={busy === 'test'} icon={<Mail className="size-4" />}>
-            Send me a test email
+          {g.mode === 'gmail_web' && g.email && (
+            <a
+              href={gmailCompose(g.email, g.email, 'Autoreach test', 'This is how Autoreach hands you each email: written and ready. Press Send, or just close this window.')}
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex h-10 items-center gap-2 rounded-[4px] bg-paper px-4 text-[14px] font-medium text-ink transition-colors duration-150 hover:bg-ground-2"
+            >
+              <Mail className="size-4" /> Open a test email
+            </a>
+          )}
+          <Button variant="onDark" onClick={() => setEditing(true)}>
+            Change address
           </Button>
-          <Button variant="primary" onClick={onNext}>
-            Continue
-          </Button>
+          {onNext && (
+            <Button variant="primary" onClick={onNext}>
+              Continue
+            </Button>
+          )}
         </div>
       </div>
     );
@@ -339,47 +343,98 @@ function GmailStep({ health, onHealth, onNext }: { health: Health; onHealth: () 
 
   return (
     <div className="grid gap-4">
-      {health.fakeGmail ? (
-        <div className="paper-card grid gap-4 p-6">
-          <p className="text-[15px] text-ink-3">Demo mode: Gmail is replaced by a local test mailbox. Nothing leaves this computer.</p>
-          <Button onClick={saveAndConnect} busy={busy === 'connect'} className="justify-self-start">
-            Connect demo mailbox
+      <form className="paper-card grid gap-5 p-5 md:p-7" onSubmit={(e) => (e.preventDefault(), save())}>
+        <div>
+          <Label htmlFor="gmail-addr">Your Gmail address</Label>
+          <Input id="gmail-addr" type="email" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@gmail.com" />
+        </div>
+        <ul className="grid gap-2 text-[15px] text-ink-2">
+          {['No passwords and no Google setup.', 'Each approved email opens in your Gmail, already written. You press Send.', 'Autoreach never reads your inbox. You paste replies in, and Claude spots offers.'].map((t) => (
+            <li key={t} className="flex gap-2">
+              <Check className="mt-1 size-4 shrink-0 text-moss" /> {t}
+            </li>
+          ))}
+        </ul>
+        <div className="flex flex-wrap justify-end gap-2">
+          {g.connected && (
+            <Button type="button" variant="ghost" onClick={() => setEditing(false)}>
+              Cancel
+            </Button>
+          )}
+          <Button type="submit" size="lg" busy={busy} disabled={!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email.trim())}>
+            Use this Gmail
           </Button>
         </div>
-      ) : (
-        <>
-          <ol className="dark-card on-dark grid gap-4 p-5 text-[14px] md:p-6">
-            <li className="text-[13px] text-cream/70">One-time setup, about 5 minutes. Google needs your own OAuth app because Autoreach has no server.</li>
-            {[
-              <>Open <a className="underline decoration-cream/40 underline-offset-2 hover:decoration-cream" href="https://console.cloud.google.com/projectcreate" target="_blank" rel="noreferrer">Google Cloud console <ExternalLink className="inline size-3" /></a> and create a project called Autoreach.</>,
-              <>In <b>APIs &amp; Services → Library</b>, enable the <b>Gmail API</b>.</>,
-              <>In <b>Google Auth Platform → Branding/Audience</b>: user type External, app name Autoreach, your email. Add <code className="font-mono text-[12px]">gmail.send</code> and <code className="font-mono text-[12px]">gmail.readonly</code> under Data access.</>,
-              <>In <b>Audience</b>, press <b>Publish app</b> (status "In production"). In "Testing", Google signs you out every 7 days. You will see an "unverified app" warning once; that is expected for a personal app.</>,
-              <>In <b>Clients</b>, create an OAuth client of type <b>Desktop app</b>. Copy the Client ID and Client secret below.</>,
-            ].map((x, i) => (
-              <li key={i} className="grid grid-cols-[28px_1fr] gap-2">
-                <span className="grid size-6 place-items-center rounded-[3px] bg-white/10 text-[12px]">{i + 1}</span>
-                <span className="text-cream/90">{x}</span>
-              </li>
-            ))}
-          </ol>
-          <div className="paper-card grid gap-4 p-5 md:p-6">
-            <div>
-              <Label htmlFor="cid">Client ID</Label>
-              <Input id="cid" value={clientId} onChange={(e) => setClientId(e.target.value)} placeholder={g.hasClient ? 'Saved in your keychain. Paste to replace.' : '1234…apps.googleusercontent.com'} autoComplete="off" spellCheck={false} />
-            </div>
-            <div>
-              <Label htmlFor="csec">Client secret</Label>
-              <Input id="csec" type="password" value={secret} onChange={(e) => setSecret(e.target.value)} placeholder={g.hasClient ? '••••••••' : 'GOCSPX-…'} autoComplete="off" />
-            </div>
-            <p className="text-[13px] text-ink-3">Both are stored in your macOS Keychain, never in a file. Sign in with the Gmail you want to send from and tick both Gmail boxes.</p>
-            {g.error && <p className="text-[14px] text-alarm">{g.error}</p>}
-            <Button size="lg" className="justify-self-end" onClick={saveAndConnect} busy={busy === 'connect'} disabled={!g.hasClient && (!clientId || !secret)}>
-              Connect Gmail
-            </Button>
-          </div>
-        </>
-      )}
+      </form>
+      <details className="group rounded-[6px] bg-ground-2 shadow-[inset_0_0_0_1px_var(--color-line)]">
+        <summary className="flex h-12 items-center px-4 text-[14px] text-ink-2">Advanced: automatic sending and reply alerts (needs a Google Cloud setup)</summary>
+        <div className="p-4 pt-0">
+          <AdvancedGmail health={health} />
+        </div>
+      </details>
+    </div>
+  );
+}
+
+/** Optional automatic mode: your own Google OAuth client, so Autoreach can send and watch replies by itself. */
+function AdvancedGmail({ health }: { health: Health }) {
+  const toast = useToast();
+  const [clientId, setClientId] = useState('');
+  const [secret, setSecret] = useState('');
+  const [busy, setBusy] = useState(false);
+  const g = health.gmail;
+
+  const connect = async () => {
+    setBusy(true);
+    try {
+      if (!health.fakeGmail && (clientId || !g.hasClient)) await post('/api/gmail/client', { clientId: clientId.trim(), clientSecret: secret.trim() });
+      const { url } = await api<{ url: string }>('/api/gmail/auth-url');
+      window.location.href = url;
+    } catch (e) {
+      toast((e as Error).message, 'error');
+      setBusy(false);
+    }
+  };
+
+  if (health.fakeGmail)
+    return (
+      <Button onClick={connect} busy={busy}>
+        Connect demo mailbox
+      </Button>
+    );
+
+  return (
+    <div className="grid gap-4">
+      <ol className="dark-card on-dark grid gap-4 p-5 text-[14px] md:p-6">
+        <li className="text-[13px] text-cream/70">About 5 minutes, once. Google needs your own OAuth app because Autoreach has no server.</li>
+        {[
+          <>Open <a className="underline decoration-cream/40 underline-offset-2 hover:decoration-cream" href="https://console.cloud.google.com/projectcreate" target="_blank" rel="noreferrer">Google Cloud console <ExternalLink className="inline size-3" /></a> and create a project called Autoreach.</>,
+          <>In <b>APIs &amp; Services → Library</b>, enable the <b>Gmail API</b>.</>,
+          <>In <b>Google Auth Platform → Branding/Audience</b>: user type External, app name Autoreach, your email. Add <code className="font-mono text-[12px]">gmail.send</code> and <code className="font-mono text-[12px]">gmail.readonly</code> under Data access.</>,
+          <>In <b>Audience</b>, press <b>Publish app</b>. In "Testing", Google signs you out every 7 days. You will see an "unverified app" warning once.</>,
+          <>In <b>Clients</b>, create an OAuth client of type <b>Desktop app</b>. Copy the Client ID and secret below.</>,
+        ].map((x, i) => (
+          <li key={i} className="grid grid-cols-[28px_1fr] gap-2">
+            <span className="grid size-6 place-items-center rounded-[3px] bg-white/10 text-[12px]">{i + 1}</span>
+            <span className="text-cream/90">{x}</span>
+          </li>
+        ))}
+      </ol>
+      <div className="paper-card grid gap-4 p-5 md:p-6">
+        <div>
+          <Label htmlFor="cid">Client ID</Label>
+          <Input id="cid" value={clientId} onChange={(e) => setClientId(e.target.value)} placeholder={g.hasClient ? 'Saved in your keychain. Paste to replace.' : '1234…apps.googleusercontent.com'} autoComplete="off" spellCheck={false} />
+        </div>
+        <div>
+          <Label htmlFor="csec">Client secret</Label>
+          <Input id="csec" type="password" value={secret} onChange={(e) => setSecret(e.target.value)} placeholder={g.hasClient ? '••••••••' : 'GOCSPX-…'} autoComplete="off" />
+        </div>
+        <p className="text-[13px] text-ink-3">Stored in your macOS Keychain, never in a file.</p>
+        {g.error && <p className="text-[14px] text-alarm">{g.error}</p>}
+        <Button className="justify-self-end" onClick={connect} busy={busy} disabled={!g.hasClient && (!clientId || !secret)}>
+          Connect for automatic sending
+        </Button>
+      </div>
     </div>
   );
 }

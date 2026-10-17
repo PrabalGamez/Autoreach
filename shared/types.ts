@@ -182,7 +182,7 @@ export interface Health {
     error: string | null;
     checkedAt: string;
   } | null;
-  gmail: { connected: boolean; email: string | null; hasClient: boolean; error: string | null };
+  gmail: { connected: boolean; email: string | null; hasClient: boolean; error: string | null; mode: 'gmail_web' | 'gmail_api' };
   paused: { paused: boolean; reason: string | null; since: string | null };
   onboarded: boolean;
   claudeCheck: { checking: boolean; stage: 'idle' | 'finding' | 'signing_in'; version: string | null };

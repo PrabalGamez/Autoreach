@@ -1,9 +1,10 @@
 import { motion } from 'framer-motion';
-import { Clock, Undo2 } from 'lucide-react';
+import { useState } from 'react';
+import { Clock, ExternalLink, MessageSquareReply, Undo2 } from 'lucide-react';
 import type { Target, TargetStatus } from '../../../shared/types.ts';
 import { PIPELINE_STATUSES } from '../../../shared/types.ts';
-import { Badge, Button, Monogram, Select, TwoTone, cx, useToast } from '../components/ui.tsx';
-import { patch, post, useApi } from '../lib/api.ts';
+import { Badge, Button, Monogram, Select, TextArea, TwoTone, cx, useToast } from '../components/ui.tsx';
+import { api, patch, post, useApi } from '../lib/api.ts';
 import { STATUS_LABEL } from './Targets.tsx';
 
 interface QueueRow {
@@ -16,7 +17,7 @@ interface QueueRow {
   last_error: string | null;
 }
 
-export function Pipeline() {
+export function Pipeline({ mode }: { mode: 'gmail_web' | 'gmail_api' }) {
   const board = useApi<{ status: TargetStatus; targets: Target[] }[]>('/api/pipeline', 5000);
   const queue = useApi<QueueRow[]>('/api/queue', 5000);
   const toast = useToast();
@@ -43,7 +44,28 @@ export function Pipeline() {
 
   return (
     <div className="grid gap-6">
-      <TwoTone a="Pipeline" b={`${total} targets`} className="text-[40px] md:text-[56px]" />
+      <div className="flex flex-wrap items-end justify-between gap-4">
+        <TwoTone a="Pipeline" b={`${total} targets`} className="text-[40px] md:text-[56px]" />
+        {mode === 'gmail_web' && (
+          <Button
+            variant="dark"
+            icon={<ExternalLink className="size-4" />}
+            onClick={async () => {
+              const w = window.open('about:blank', '_blank');
+              try {
+                const r = await api<{ url: string; count: number }>('/api/gmail/replies-search');
+                if (w) (w.opener = null), (w.location.href = r.url);
+              } catch (e) {
+                w?.close();
+                toast((e as Error).message, 'error');
+              }
+            }}
+          >
+            Check Gmail for replies
+          </Button>
+        )}
+      </div>
+      {mode === 'gmail_web' && <p className="-mt-3 text-[14px] text-ink-3">Got a reply? Press "Log reply" on that target and paste it. Claude reads it, flags offers, and honours opt-outs.</p>}
 
       {(queue.data?.length ?? 0) > 0 && (
         <section className="dark-card on-dark p-5" aria-label="Send queue">
@@ -89,6 +111,7 @@ export function Pipeline() {
                     <label className="sr-only" htmlFor={`mv-${t.id}`}>
                       Move {t.name}
                     </label>
+                    {['sent', 'replied', 'offer'].includes(t.status) && <LogReply target={t} onDone={board.reload} />}
                     <Select id={`mv-${t.id}`} value={t.status} onChange={(e) => move(t, e.target.value as TargetStatus)} className="mt-2 h-9 py-1 text-[13px]">
                       {PIPELINE_STATUSES.map((s) => (
                         <option key={s} value={s}>
@@ -102,6 +125,52 @@ export function Pipeline() {
             </section>
           ))}
         </div>
+      </div>
+    </div>
+  );
+}
+
+const LABEL: Record<string, string> = { offer: 'Offer! Check the alert.', interested: 'Interested', decline: 'Declined', auto_reply: 'Auto-reply', other: 'Reply logged', opt_out: 'Opted out. They will never be contacted again.' };
+
+/** Paste a reply from Gmail; Claude classifies it. */
+function LogReply({ target, onDone }: { target: Target; onDone: () => void }) {
+  const toast = useToast();
+  const [open, setOpen] = useState(false);
+  const [text, setText] = useState('');
+  const [busy, setBusy] = useState(false);
+  const submit = async () => {
+    setBusy(true);
+    try {
+      const r = await post<{ label: string; summary: string }>(`/api/targets/${target.id}/reply`, { text });
+      toast(`${LABEL[r.label] ?? 'Logged'}${r.summary ? ` ${r.summary}` : ''}`, r.label === 'offer' ? 'good' : 'info');
+      setOpen(false);
+      setText('');
+      onDone();
+    } catch (e) {
+      toast((e as Error).message, 'error');
+    } finally {
+      setBusy(false);
+    }
+  };
+  if (!open)
+    return (
+      <button onClick={() => setOpen(true)} className="mt-2 flex h-9 w-full items-center justify-center gap-1.5 rounded-[4px] bg-ground-2 text-[13px] text-ink-2 shadow-[inset_0_0_0_1px_var(--color-line)] hover:bg-ground">
+        <MessageSquareReply className="size-3.5" /> Log reply
+      </button>
+    );
+  return (
+    <div className="mt-2 grid gap-2">
+      <label htmlFor={`reply-${target.id}`} className="sr-only">
+        Paste {target.name}'s reply
+      </label>
+      <TextArea id={`reply-${target.id}`} rows={4} autoFocus value={text} onChange={(e) => setText(e.target.value)} placeholder="Paste their reply" className="min-h-24 text-[13px]" />
+      <div className="flex gap-2">
+        <Button size="sm" onClick={submit} busy={busy} disabled={text.trim().length < 2}>
+          Read it
+        </Button>
+        <Button size="sm" variant="ghost" onClick={() => setOpen(false)}>
+          Cancel
+        </Button>
       </div>
     </div>
   );

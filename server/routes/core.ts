@@ -7,7 +7,8 @@ import { cachedClaudeHealth, checkClaude, claudeCheckState, ensureClaudeChecked 
 import { contextJob, hasContext, skipContext, startContextJob } from '../artistContext.ts';
 import { queueDepth } from '../claude/runner.ts';
 import { extractVoice } from '../claude/tasks.ts';
-import { buildAuthUrl, disconnect, handleCallback, hasClient, isConnected, saveClient } from '../gmail/oauth.ts';
+import { buildAuthUrl, disconnect, handleCallback, hasClient, isConnected, saveClient, sendMode } from '../gmail/oauth.ts';
+import { searchUrl } from '../gmail/compose.ts';
 import { connectFake, gmail } from '../gmail/api.ts';
 import { initHistory } from '../gmail/watch.ts';
 import { sendToSelf } from '../gmail/send.ts';
@@ -33,7 +34,7 @@ export function healthPayload(): Health {
   const p = getProfile();
   return {
     claude: cachedClaudeHealth(),
-    gmail: { connected: isConnected(), email: p.sender_email, hasClient: hasClient(), error: gmailErr },
+    gmail: { connected: isConnected(), email: p.sender_email, hasClient: hasClient(), error: gmailErr, mode: sendMode() },
     paused: pauseInfo(),
     onboarded: Boolean(p.onboarded_at),
     claudeCheck: claudeCheckState(),
@@ -84,7 +85,7 @@ export async function coreRoutes(app: FastifyInstance) {
   app.post('/api/system/resume', async (_req, reply) => {
     const h = await checkClaude(true);
     if (!h.ok) return reply.code(409).send({ error: `Claude Code still unavailable: ${h.error}` });
-    if (isConnected()) {
+    if (sendMode() === 'gmail_api' && isConnected()) {
       try {
         await gmail().profile();
         setState('gmail_error', null);
@@ -134,6 +135,7 @@ export async function coreRoutes(app: FastifyInstance) {
         model_research: z.string(),
         model_classify: z.string(),
         alert_email: z.boolean(),
+        send_mode: z.enum(['gmail_web', 'gmail_api']),
         alert_desktop: z.boolean(),
         offer_confidence: z.number().min(0.3).max(0.95),
       })
@@ -143,6 +145,23 @@ export async function coreRoutes(app: FastifyInstance) {
   });
 
   // ---- gmail ----
+  /** Gmail web mode: just the address. No passwords or tokens; approved emails open in Gmail's compose window. */
+  app.post('/api/gmail/web', async (req) => {
+    const { email } = z.object({ email: z.string().trim().toLowerCase().email('Enter a valid email address') }).parse(req.body);
+    saveProfile({ sender_email: email });
+    saveSettings({ send_mode: 'gmail_web' });
+    setState('gmail_error', null);
+    return healthPayload();
+  });
+
+  /** One Gmail search for replies from everyone you have contacted. */
+  app.get('/api/gmail/replies-search', async (_req, reply) => {
+    const p = getProfile();
+    if (!p.sender_email) return reply.code(400).send({ error: 'Add your Gmail address first.' });
+    const rows = getDb().prepare("SELECT DISTINCT to_email FROM messages WHERE channel = 'gmail' AND to_email IS NOT NULL ORDER BY id DESC LIMIT 60").all() as { to_email: string }[];
+    return { url: searchUrl(p.sender_email, rows.map((r) => r.to_email)), count: rows.length };
+  });
+
   app.post('/api/gmail/client', async (req) => {
     const b = z.object({ clientId: z.string().regex(/\.apps\.googleusercontent\.com$/, 'Client ID should end with .apps.googleusercontent.com'), clientSecret: z.string().min(10) }).parse(req.body);
     saveClient(b.clientId, b.clientSecret);
@@ -170,19 +189,22 @@ export async function coreRoutes(app: FastifyInstance) {
       }
       const p = await initHistory();
       saveProfile({ sender_email: p.emailAddress.toLowerCase() });
+      saveSettings({ send_mode: 'gmail_api' });
       return page('Gmail connected', `Autoreach will send as ${p.emailAddress}.`);
     } catch (err) {
       return page('Gmail not connected', (err as Error).message.replace(/</g, '&lt;'));
     }
   });
 
-  app.post('/api/gmail/test', async () => {
+  app.post('/api/gmail/test', async (_req, reply) => {
+    if (sendMode() !== 'gmail_api') return reply.code(400).send({ error: 'Automatic mode only.' });
     const r = await sendToSelf('Autoreach test', 'Gmail is connected. Autoreach can send from this address.\n\nYou can delete this email.');
     return { ok: true, id: r.id };
   });
 
   app.post('/api/gmail/disconnect', async () => {
     disconnect();
+    saveSettings({ send_mode: 'gmail_web' });
     return healthPayload();
   });
 

@@ -8,7 +8,7 @@ import { post, useApi } from '../lib/api.ts';
 import type { Route } from '../components/Shell.tsx';
 
 /** Full-screen, blocking. Stays until every pending offer is acknowledged. */
-export function OfferAlerts({ onChange, go }: { onChange: () => void; go: (r: Route) => void }) {
+export function OfferAlerts({ onChange, go, sender }: { onChange: () => void; go: (r: Route) => void; sender: string | null }) {
   const alerts = useApi<{ pending: OfferAlert[]; notice: string }>('/api/alerts', 5000);
   const toast = useToast();
   const [busy, setBusy] = useState<string | null>(null);
@@ -116,7 +116,12 @@ export function OfferAlerts({ onChange, go }: { onChange: () => void; go: (r: Ro
         </p>
 
         <div className="mt-8 flex flex-wrap gap-2">
-          <a href={`https://mail.google.com/mail/u/0/#all/${a.thread_id}`} target="_blank" rel="noreferrer" className="inline-flex h-12 items-center gap-2 rounded-[4px] bg-cream px-5 text-[15px] font-medium text-ink transition-colors duration-150 hover:bg-white">
+          <a
+            href={
+              a.thread_id.startsWith('manual-')
+                ? `https://mail.google.com/mail/?authuser=${encodeURIComponent(sender ?? '')}#search/${encodeURIComponent(`from:${a.from_email ?? ''}`)}`
+                : `https://mail.google.com/mail/?authuser=${encodeURIComponent(sender ?? '')}#all/${a.thread_id}`
+            } target="_blank" rel="noreferrer" className="inline-flex h-12 items-center gap-2 rounded-[4px] bg-cream px-5 text-[15px] font-medium text-ink transition-colors duration-150 hover:bg-white">
             <ExternalLink className="size-4" /> Open thread
           </a>
           <Button ref={first} size="lg" variant="ember" busy={busy === 'draft'} icon={<PenLine className="size-4" />} onClick={() => act('draft')}>

@@ -57,14 +57,14 @@ export function App() {
   return (
     <>
       <Shell route={route} go={go} health={h} onHealth={health.reload}>
-        {route === 'review' && <Review onChange={health.reload} go={go} />}
+        {route === 'review' && <Review onChange={health.reload} go={go} mode={h.gmail.mode} />}
         {route === 'targets' && <Targets go={go} />}
-        {route === 'pipeline' && <Pipeline />}
+        {route === 'pipeline' && <Pipeline mode={h.gmail.mode} />}
         {route === 'referrals' && <Referrals go={go} />}
         {route === 'dashboard' && <Dashboard />}
         {route === 'settings' && <Settings health={h} onHealth={health.reload} />}
       </Shell>
-      {h.pendingOffers > 0 && <OfferAlerts onChange={health.reload} go={go} />}
+      {h.pendingOffers > 0 && <OfferAlerts onChange={health.reload} go={go} sender={h.gmail.email} />}
     </>
   );
 }
