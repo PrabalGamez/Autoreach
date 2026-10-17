@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
-import { Download, Mail, RefreshCw, Trash2, Unplug } from 'lucide-react';
-import type { Health, Profile } from '../../../shared/types.ts';
+import { Download, Loader2, Mail, RefreshCw, Trash2, Unplug } from 'lucide-react';
+import type { ArtistContext, Health, Profile } from '../../../shared/types.ts';
 import { Button, Input, Label, Section, Select, TextArea, Toggle, TwoTone, useToast } from '../components/ui.tsx';
 import { api, post, put, useApi } from '../lib/api.ts';
 
@@ -167,6 +167,8 @@ export function Settings({ health, onHealth }: { health: Health; onHealth: () =>
           </Section>
         </div>
 
+        <ContextSection health={health} onHealth={onHealth} />
+
         <Section title="Voice profile" aside={<Button size="sm" busy={busy === 'v'} disabled={!voice} onClick={() => run('v', () => put('/api/profile/voice', voice), 'Voice saved.')}>Save</Button>}>
           {voice ? (
             <div className="grid gap-3 sm:grid-cols-2">
@@ -243,5 +245,55 @@ export function Settings({ health, onHealth }: { health: Health; onHealth: () =>
         </div>
       </div>
     </div>
+  );
+}
+
+function ContextSection({ health, onHealth }: { health: Health; onHealth: () => void }) {
+  const toast = useToast();
+  const data = useApi<{ context: ArtistContext | null; contextAt: string | null }>('/api/artist-context');
+  const [note, setNote] = useState('');
+  const running = health.contextJob.status === 'running';
+  useEffect(() => {
+    if (!running) data.reload();
+  }, [running]); // eslint-disable-line react-hooks/exhaustive-deps
+  const c = data.data?.context;
+  const rebuild = async () => {
+    try {
+      await post('/api/artist-context/build', note ? { note } : {});
+      setNote('');
+      onHealth();
+    } catch (e) {
+      toast((e as Error).message, 'error');
+    }
+  };
+  const searches = health.contextJob.activity.filter((a) => a.kind === 'search').length;
+  const reads = health.contextJob.activity.filter((a) => a.kind === 'fetch').length;
+  return (
+    <Section title="Artist context" aside={c && data.data?.contextAt ? <span className="text-[13px] text-ink-3">Updated {new Date(data.data.contextAt).toLocaleDateString()}</span> : undefined}>
+      {c ? (
+        <div className="grid gap-3 text-[15px]">
+          <p>{c.summary}</p>
+          <p className="text-ink-3">
+            <span className="capitalize">{c.audience_stage}</span> · {c.sound}
+          </p>
+          {c.facts_to_use.length > 0 && (
+            <ul className="list-disc pl-5 text-[14px]">
+              {c.facts_to_use.map((f) => (
+                <li key={f}>{f}</li>
+              ))}
+            </ul>
+          )}
+        </div>
+      ) : (
+        <p className="text-[15px] text-ink-3">{health.contextSkipped ? 'Skipped. Drafts use only your profile.' : 'Not built yet.'}</p>
+      )}
+      <div className="mt-4 flex flex-wrap items-center gap-2">
+        <Input aria-label="Note for Claude" className="min-w-0 flex-1" placeholder="Optional note, e.g. new release out" value={note} onChange={(e) => setNote(e.target.value)} disabled={running} />
+        <Button variant="dark" size="md" onClick={rebuild} disabled={running} icon={running ? <Loader2 className="size-4 animate-spin" /> : <RefreshCw className="size-4" />}>
+          {running ? `Researching · ${searches} searches, ${reads} pages` : c ? 'Rebuild' : 'Build now'}
+        </Button>
+      </div>
+      {health.contextJob.status === 'failed' && <p className="mt-2 text-[14px] text-alarm">Last run failed: {health.contextJob.error?.slice(0, 160)}</p>}
+    </Section>
   );
 }

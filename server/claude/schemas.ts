@@ -82,3 +82,21 @@ export const IntroMatchSchema = z.object({
     .array(z.object({ person_id: z.number().int(), target_id: z.number().int(), reason: z.string(), confidence: z.enum(['low', 'medium', 'high']) }))
     .max(30),
 });
+
+export const ArtistContextSchema = z.object({
+  summary: z.string(),
+  sound: z.string(),
+  audience_stage: z.enum(['just starting', 'emerging', 'growing', 'established']),
+  audience_reason: z.string(),
+  releases: z.array(z.object({ title: z.string(), url: z.string().nullable(), year: z.string().nullable(), note: z.string() })).max(12),
+  platforms: z.array(z.object({ platform: z.string(), url: z.string(), followers: z.string().nullable(), note: z.string() })).max(10),
+  similar_artists: z.array(z.string()).max(10),
+  strengths: z.array(z.string()).max(6),
+  gaps: z.array(z.string()).max(6),
+  label_fit: z
+    .array(z.object({ tier: z.enum(['reach', 'realistic', 'stepping stone']), examples: z.array(z.string()).max(6), why: z.string() }))
+    .max(3),
+  facts_to_use: z.array(z.string()).max(10),
+  uncertain: z.array(z.string()).max(8),
+  sources: z.array(z.string()).max(15),
+});

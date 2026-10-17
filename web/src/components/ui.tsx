@@ -19,7 +19,7 @@ export function LogoPill({ onClick }: { onClick?: () => void }) {
   return (
     <button onClick={onClick} className="flex h-9 w-fit items-center gap-2 rounded-[4px] bg-paper pl-1.5 pr-3 shadow-[0_0_0_1px_rgba(0,0,0,0.06),0_1px_2px_rgba(0,0,0,0.08)] transition-transform duration-150 active:scale-[0.98]" aria-label="Autoreach home">
       <Mark size={24} />
-      <span className="text-[15px] font-medium tracking-[-0.02em]">autoreach.</span>
+      <span className="text-[15px] font-medium tracking-[-0.02em] text-ink">autoreach.</span>
     </button>
   );
 }

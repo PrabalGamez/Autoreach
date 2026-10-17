@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { z } from 'zod';
-import { makeApp, TOKEN } from './helpers.ts';
-import { checkClaude } from '../server/claude/health.ts';
+import { makeApp, TOKEN, waitFor } from './helpers.ts';
+import { checkClaude, resetHealthForTests } from '../server/claude/health.ts';
 import { runClaude, childEnv, ClaudeAuthError, cliSchema } from '../server/claude/runner.ts';
 import { BriefSchema } from '../server/claude/schemas.ts';
 import { pauseInfo } from '../server/db/index.ts';
@@ -72,8 +72,25 @@ describe('stage 1: launcher, security, Claude Code health', () => {
     expect(pauseInfo().paused).toBe(true);
     process.env.FAKE_CLAUDE_MODE = 'ok';
     const r = await ctx.call('POST', '/api/health/recheck');
-    expect(r.body.claude.ok).toBe(true);
-    expect(r.body.paused.paused).toBe(false);
+    expect(r.body.claudeCheck.checking).toBe(true);
+    const after = await waitFor(async () => {
+      const h = (await ctx.call('GET', '/api/health')).body;
+      return h.claudeCheck.checking ? null : h;
+    });
+    expect(after.claude.ok).toBe(true);
+    expect(after.paused.paused).toBe(false);
+  });
+
+  it('health never blocks: first call reports checking with a stage, then the result', async () => {
+    resetHealthForTests();
+    process.env.FAKE_CLAUDE_DELAY_MS = '300';
+    const first = (await ctx.call('GET', '/api/health')).body;
+    expect(first.claude).toBeNull();
+    expect(first.claudeCheck.checking).toBe(true);
+    expect(['finding', 'signing_in']).toContain(first.claudeCheck.stage);
+    const done = await waitFor(async () => (await ctx.call('GET', '/api/health')).body.claude);
+    expect(done.ok).toBe(true);
+    delete process.env.FAKE_CLAUDE_DELAY_MS;
   });
 
   it('resume refuses while Claude Code is still logged out', async () => {

@@ -9,21 +9,35 @@ import {
   IntroMatchSchema,
   ProposalSchema,
   VoiceSchema,
+  ArtistContextSchema,
   type DraftOut,
 } from './schemas.ts';
+import type { ClaudeActivity } from './runner.ts';
 
 const WEB = ['WebSearch', 'WebFetch'];
 export const OPT_OUT_LINE = "If this isn't a fit, just let me know and I won't follow up.";
 
 function profileBlock(p: Profile) {
-  return [
+  const lines = [
     `Name / alias: ${p.alias}${p.real_name ? ` (${p.real_name})` : ''}`,
     `One-line pitch: ${p.pitch}`,
     `Genres / niche: ${p.niches.join(', ')}`,
     `Wants: ${p.goals.join(', ')}`,
     `Links: ${p.links.map((l) => `${l.label}: ${l.url}`).join(' | ')}`,
     `Best works:\n${p.best_works.map((w) => `- ${w.title} ${w.url}${w.note ? ` (${w.note})` : ''}`).join('\n')}`,
-  ].join('\n');
+  ];
+  const c = p.artist_context;
+  if (c) {
+    lines.push(
+      `Artist context (researched earlier):`,
+      `- Sound: ${c.sound}`,
+      `- Stage: ${c.audience_stage} (${c.audience_reason})`,
+      `- Similar artists: ${c.similar_artists.join(', ') || 'unknown'}`,
+      `- Verified facts you may use: ${c.facts_to_use.join(' | ') || 'none'}`,
+      `- Strengths for pitching: ${c.strengths.join(' | ')}`,
+    );
+  }
+  return lines.join('\n');
 }
 
 function voiceBlock(p: Profile) {
@@ -54,6 +68,26 @@ Email rules:
 - Plain text. No markdown, no emoji, no attachments mentioned, no fake familiarity, no flattery clichés ("huge fan", "hope this finds you well").
 - Never invent facts about the sender (plays, support, numbers) that are not in the profile.
 - Write in the sender's voice. Sign with the sender's alias.`;
+
+// ---------- artist context ----------
+export async function buildArtistContext(p: Profile, onActivity: (a: ClaudeActivity) => void, note?: string) {
+  const s = getSettings();
+  return runClaude({
+    task: 'artist_context',
+    system: `You research one independent music artist so an outreach assistant understands them before pitching labels and brands.
+Use web search and fetch their own links first. Many artists share a name: only use information you can tie to the links or works given. Put anything you could not confirm in "uncertain".
+Never invent follower counts, plays, releases or press. followers = null when you did not see a number on the page.
+facts_to_use = short, verifiable facts that are safe to mention in a pitch (with numbers only if seen). If very little is public, say so plainly; that is useful too.
+label_fit = up to three tiers (reach, realistic, stepping stone) with real, currently active labels or channels as examples.`,
+    prompt: `Artist:\n${profileBlock({ ...p, artist_context: null })}${note ? `\n\nNote from the artist: ${note}` : ''}`,
+    schema: ArtistContextSchema,
+    model: s.model_research,
+    tools: WEB,
+    maxTurns: 30,
+    timeoutMs: 8 * 60_000,
+    onActivity,
+  });
+}
 
 // ---------- voice ----------
 export async function extractVoice(samples: string[]) {

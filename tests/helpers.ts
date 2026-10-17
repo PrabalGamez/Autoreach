@@ -1,6 +1,8 @@
 import { resetDbForTests } from '../server/db/index.ts';
 import { buildApp } from '../server/app.ts';
 import { fakeGmail } from '../server/gmail/api.ts';
+import { checkClaude, resetHealthForTests } from '../server/claude/health.ts';
+import { resetContextJobForTests } from '../server/artistContext.ts';
 
 export const TOKEN = 'a'.repeat(48);
 export const HOSTHDR = '127.0.0.1:4799';
@@ -9,6 +11,10 @@ export async function makeApp() {
   resetDbForTests();
   fakeGmail.reset();
   process.env.FAKE_CLAUDE_MODE = 'ok';
+  delete process.env.FAKE_CLAUDE_CONTEXT_FAIL;
+  resetHealthForTests();
+  resetContextJobForTests();
+  await checkClaude(true);
   const app = await buildApp(TOKEN, { port: 4799, onShutdown: () => {} });
   const call = async (method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE', url: string, payload?: unknown) => {
     const res = await app.inject({

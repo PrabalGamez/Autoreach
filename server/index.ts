@@ -1,6 +1,6 @@
 import fs from 'node:fs';
 import { HOST, PID_PATH, PORT, ensureHome } from './config.ts';
-import { openDb, pauseInfo, unpause } from './db/index.ts';
+import { openDb } from './db/index.ts';
 import { createSessionToken } from './security.ts';
 import { buildApp } from './app.ts';
 import { markStaleJobs } from './claude/runner.ts';
@@ -34,8 +34,5 @@ process.on('SIGTERM', shutdown);
 process.on('SIGINT', shutdown);
 
 // Health check at boot; blocking screen in the UI reads the result.
-checkClaude(true).then((h) => {
-  log.info(`Claude Code: ${h.ok ? `ok (${h.version})` : `NOT READY: ${h.error}`}`);
-  if (h.ok && pauseInfo().reason?.startsWith('Claude Code')) unpause();
-});
+checkClaude(true, { liftPause: true }).then((h) => log.info(`Claude Code: ${h.ok ? `ok (${h.version})` : `NOT READY: ${h.error}`}`));
 startScheduler();

@@ -50,7 +50,35 @@ export interface Profile {
   } | null;
   sender_email: string | null;
   postal_address: string;
+  artist_context: ArtistContext | null;
+  context_at: string | null;
+  context_skipped_at: string | null;
   onboarded_at: string | null;
+}
+
+/** Claude's research on the artist, built once after login + profile. */
+export interface ArtistContext {
+  summary: string;
+  sound: string;
+  audience_stage: 'just starting' | 'emerging' | 'growing' | 'established';
+  audience_reason: string;
+  releases: { title: string; url: string | null; year: string | null; note: string }[];
+  platforms: { platform: string; url: string; followers: string | null; note: string }[];
+  similar_artists: string[];
+  strengths: string[];
+  gaps: string[];
+  label_fit: { tier: 'reach' | 'realistic' | 'stepping stone'; examples: string[]; why: string }[];
+  facts_to_use: string[];
+  uncertain: string[];
+  sources: string[];
+}
+
+export interface ContextJob {
+  status: 'idle' | 'running' | 'done' | 'failed';
+  startedAt: string | null;
+  finishedAt: string | null;
+  activity: { kind: 'search' | 'fetch' | 'tool'; text: string; at: string }[];
+  error: string | null;
 }
 
 export interface Target {
@@ -157,6 +185,12 @@ export interface Health {
   gmail: { connected: boolean; email: string | null; hasClient: boolean; error: string | null };
   paused: { paused: boolean; reason: string | null; since: string | null };
   onboarded: boolean;
+  claudeCheck: { checking: boolean; stage: 'idle' | 'finding' | 'signing_in'; version: string | null };
+  profileComplete: boolean;
+  /** The "ifContext" switch: true once Claude has researched the artist, so the context screen is skipped. */
+  hasContext: boolean;
+  contextSkipped: boolean;
+  contextJob: ContextJob;
   jobs: { running: number; waiting: number };
   pendingOffers: number;
   queue: { queued: number; sentToday: number; cap: number; nextSendAt: string | null };

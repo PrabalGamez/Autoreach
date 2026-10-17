@@ -11,6 +11,7 @@ process.env.AUTOREACH_PORT ??= '4748';
 process.env.AUTOREACH_FAKE_GMAIL = '1';
 process.env.AUTOREACH_SECRETS = 'memory';
 process.env.AUTOREACH_CLAUDE_BIN ??= path.join(root, 'tests', 'fake-claude.mjs');
-process.env.FAKE_CLAUDE_DELAY_MS ??= '1200';
+process.env.FAKE_CLAUDE_DELAY_MS ??= '1500';
+process.env.FAKE_CLAUDE_STEP_MS ??= '900';
 register();
 await import(pathToFileURL(path.join(root, 'server', 'index.ts')).href);

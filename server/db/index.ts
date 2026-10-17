@@ -14,7 +14,21 @@ export function openDb(file = DB_PATH): Database.Database {
   db.pragma('journal_mode = WAL');
   db.pragma('foreign_keys = ON');
   db.exec(fs.readFileSync(path.join(here, 'schema.sql'), 'utf8'));
+  migrate(db);
   return db;
+}
+
+/** Columns added after the first release. CREATE TABLE IF NOT EXISTS does not add them to old databases. */
+const ADDED_COLUMNS: [table: string, column: string, ddl: string][] = [
+  ['profile', 'artist_context', 'TEXT'],
+  ['profile', 'context_at', 'TEXT'],
+  ['profile', 'context_skipped_at', 'TEXT'],
+];
+export function migrate(d: Database.Database) {
+  for (const [table, column, ddl] of ADDED_COLUMNS) {
+    const cols = d.prepare(`PRAGMA table_info(${table})`).all() as { name: string }[];
+    if (!cols.some((c) => c.name === column)) d.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${ddl}`);
+  }
 }
 
 export function getDb(): Database.Database {

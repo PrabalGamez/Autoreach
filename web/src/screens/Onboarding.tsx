@@ -70,7 +70,7 @@ export function Onboarding({ health, onHealth, onDone }: { health: Health; onHea
         <div className="lg:pt-24">
           <AnimatePresence mode="wait">
             <motion.div key={step} initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -12 }} transition={{ duration: 0.3 }}>
-              {profile.data && step === 0 && <ProfileStep profile={profile.data} onSaved={(p) => (profile.setData(p), setStep(1))} />}
+              {profile.data && step === 0 && <ProfileStep profile={profile.data} onSaved={(p) => (profile.setData(p), setStep(1), onHealth())} />}
               {profile.data && step === 1 && <VoiceStep profile={profile.data} onSaved={(p) => (profile.setData(p), setStep(2))} onSkip={() => setStep(2)} />}
               {step === 2 && <GmailStep health={health} onHealth={onHealth} onNext={() => setStep(3)} />}
               {step === 3 && <TargetsStep onDone={onDone} />}

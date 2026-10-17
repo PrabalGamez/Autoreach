@@ -17,7 +17,20 @@ const props = Object.keys(JSON.parse(schemaArg).properties ?? {});
 const log = process.env.FAKE_CLAUDE_LOG;
 if (log) fs.appendFileSync(log, JSON.stringify({ args, props, stdin: stdin.slice(0, 4000) }) + '\n');
 
-const out = (structured) => {
+const streaming = args.includes('stream-json');
+const stepMs = Number(process.env.FAKE_CLAUDE_STEP_MS ?? 0);
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+const toolUse = (name, input) => JSON.stringify({ type: 'assistant', message: { content: [{ type: 'tool_use', id: `t${Math.random()}`, name, input }] } });
+
+// In stream-json mode, emit a few tool calls before the result, like the real CLI does.
+const out = async (structured, activity = []) => {
+  if (streaming) {
+    console.log(JSON.stringify({ type: 'system', subtype: 'init' }));
+    for (const [name, input] of activity) {
+      if (stepMs) await sleep(stepMs);
+      console.log(toolUse(name, input));
+    }
+  }
   console.log(JSON.stringify({ type: 'result', subtype: 'success', is_error: false, result: JSON.stringify(structured), structured_output: structured, total_cost_usd: 0.001 }));
   process.exit(0);
 };
@@ -31,13 +44,49 @@ const field = (name) => (stdin.match(new RegExp(`^${name}: (.+)$`, 'm')) ?? [])[
 const delay = Number(process.env.FAKE_CLAUDE_DELAY_MS ?? 0);
 if (delay) await new Promise((r) => setTimeout(r, delay));
 
-if (props.includes('ok')) out({ ok: true });
+if (props.includes('ok')) await out({ ok: true });
+
+if (props.includes('audience_stage')) {
+  if (process.env.FAKE_CLAUDE_CONTEXT_FAIL === '1') {
+    console.log(JSON.stringify({ type: 'result', is_error: true, result: 'fake-claude: research failed' }));
+    process.exit(1);
+  }
+  const alias = (stdin.match(/^Name \/ alias: ([^(\n]+)/m) ?? [])[1]?.trim() ?? 'Artist';
+  await out(
+    {
+      summary: `${alias} is an independent producer making heavy dubstep, with a small but active SoundCloud presence.`,
+      sound: 'Metallic growl basses, half-time drums at 150 BPM, cinematic build-ups.',
+      audience_stage: 'emerging',
+      audience_reason: 'A handful of public uploads, no label releases found yet.',
+      releases: [{ title: 'Sample Track', url: 'https://soundcloud.com/sample/private', year: '2026', note: 'Unreleased, shared privately' }],
+      platforms: [{ platform: 'SoundCloud', url: 'https://soundcloud.com/sample', followers: null, note: 'Follower count not visible' }],
+      similar_artists: ['Sample Artist One', 'Sample Artist Two'],
+      strengths: ['Clear, consistent heavy sound', 'Finished, mastered tracks ready to send'],
+      gaps: ['No released catalogue yet', 'Little press or DJ support to point to'],
+      label_fit: [
+        { tier: 'reach', examples: ['Sample Big Label'], why: 'Signs heavy 150 BPM records, but mostly from established artists' },
+        { tier: 'realistic', examples: ['Sample Bass Label A'], why: 'Regularly signs first-time producers' },
+        { tier: 'stepping stone', examples: ['Sample Promo Channel'], why: 'Builds plays and proof before label pitches' },
+      ],
+      facts_to_use: ['Produces heavy dubstep at 150 BPM', 'Has unreleased tracks with stems ready'],
+      uncertain: [`Several other artists use the name "${alias}"; only the SoundCloud link was used.`],
+      sources: ['https://soundcloud.com/sample'],
+    },
+    [
+      ['WebSearch', { query: `"${alias}" dubstep producer` }],
+      ['WebFetch', { url: 'https://soundcloud.com/sample' }],
+      ['WebSearch', { query: `${alias} soundcloud heavy dubstep 150 bpm` }],
+      ['WebFetch', { url: 'https://soundcloud.com/sample/private' }],
+      ['WebSearch', { query: 'heavy dubstep labels signing new producers 2026' }],
+    ],
+  );
+}
 
 if (props.includes('typical_length'))
-  out({ tone: 'warm, direct, a little dry', typical_length: '80-120 words', greeting: 'Hey {name},', signoff: 'Cheers, Prabal', traits: ['short paragraphs', 'one specific compliment', 'ends with a question'], avoid: ['exclamation marks', 'buzzwords'] });
+  await out({ tone: 'warm, direct, a little dry', typical_length: '80-120 words', greeting: 'Hey {name},', signoff: 'Cheers, Prabal', traits: ['short paragraphs', 'one specific compliment', 'ends with a question'], avoid: ['exclamation marks', 'buzzwords'] });
 
 if (props.includes('proposals'))
-  out({
+  await out({
     proposals: [
       { name: 'Sample Bass Label A', kind: 'label', domain: 'samplebass-a.test', contact_email: 'demos@samplebass-a.test', contact_source_url: 'https://samplebass-a.test/contact', route: 'email', form_url: null, why_fit: 'Releases heavy 150 BPM dubstep from new producers.', sources: ['https://samplebass-a.test'] },
       { name: 'Sample Riddim Label B', kind: 'label', domain: 'riddim-b.test', contact_email: null, contact_source_url: null, route: 'form_only', form_url: 'https://www.labelradar.com/labels/riddim-b', why_fit: 'Riddim-leaning label that only takes LabelRadar demos.', sources: ['https://riddim-b.test/demos'] },
@@ -46,7 +95,7 @@ if (props.includes('proposals'))
 
 if (props.includes('favourites')) {
   const name = field('Target');
-  out({
+  await out({
     summary: `${name} is an independent bass music label releasing singles and EPs from emerging producers.`,
     aesthetic: 'Dark, metallic sound design with half-time drums and big call-and-response drops.',
     recent: ['Sample single "Ironclad" (Sep 2026)', 'Sample EP "Undertow" (Jul 2026)'],
@@ -81,7 +130,7 @@ if (props.includes('unique_reference')) {
     `${name} folks,\n\nMy question is simple. Does ${ref} mean you are signing more metallic, half-time stuff this year? If so I have a finished 150 BPM single that fits.\n\n${link}\n\nPrabal`,
     `Hey ${name},\n\nWriting because ${ref} is the reference track pinned in my project folder. I make heavy dubstep and just wrapped a single built around a similar call-and-response idea. Worth a spin?\n\n${link}\n\nCheers, Prabal`,
   ];
-  out({
+  await out({
     subject: `Heavy 150 BPM demo for ${name}`,
     body: `${warm ? `${warm[1]} suggested I reach out. ` : ''}${bodies[h % bodies.length]}${note ? `\n(${note})` : ''}`,
     unique_reference: ref,
@@ -92,17 +141,17 @@ if (props.includes('unique_reference')) {
 if (props.includes('label')) {
   const text = stdin.toLowerCase();
   if (/contract|advance|royalt|offer|\$\d|usd|inr/.test(text))
-    out({ label: 'offer', confidence: 0.92, summary: 'Offers a single release with an advance and a royalty split.', terms: { money: '$500 advance, 50/50 net royalties', rights: 'Master rights for 5 years', term_length: '5 years', exclusivity: 'Exclusive worldwide', other: ['Release in December'] }, questions: ['Does the advance recoup against royalties?', 'Do rights revert after 5 years?'] });
-  if (/out of office|ooo|away until/.test(text)) out({ label: 'auto_reply', confidence: 0.95, summary: 'Out of office.', terms: { money: null, rights: null, term_length: null, exclusivity: null, other: [] }, questions: [] });
-  if (/not a fit|pass|no thanks/.test(text)) out({ label: 'decline', confidence: 0.9, summary: 'They passed on the track.', terms: { money: null, rights: null, term_length: null, exclusivity: null, other: [] }, questions: [] });
-  out({ label: 'interested', confidence: 0.8, summary: 'Wants to hear more tracks.', terms: { money: null, rights: null, term_length: null, exclusivity: null, other: [] }, questions: [] });
+    await out({ label: 'offer', confidence: 0.92, summary: 'Offers a single release with an advance and a royalty split.', terms: { money: '$500 advance, 50/50 net royalties', rights: 'Master rights for 5 years', term_length: '5 years', exclusivity: 'Exclusive worldwide', other: ['Release in December'] }, questions: ['Does the advance recoup against royalties?', 'Do rights revert after 5 years?'] });
+  if (/out of office|ooo|away until/.test(text)) await out({ label: 'auto_reply', confidence: 0.95, summary: 'Out of office.', terms: { money: null, rights: null, term_length: null, exclusivity: null, other: [] }, questions: [] });
+  if (/not a fit|pass|no thanks/.test(text)) await out({ label: 'decline', confidence: 0.9, summary: 'They passed on the track.', terms: { money: null, rights: null, term_length: null, exclusivity: null, other: [] }, questions: [] });
+  await out({ label: 'interested', confidence: 0.8, summary: 'Wants to hear more tracks.', terms: { money: null, rights: null, term_length: null, exclusivity: null, other: [] }, questions: [] });
 }
 
 if (props.includes('suggestions')) {
   const tIdx = stdin.indexOf('Targets:');
   const ps = [...stdin.slice(0, tIdx).matchAll(/^\[(\d+)\]/gm)].map((m) => Number(m[1]));
   const ts = [...stdin.slice(tIdx).matchAll(/^\[(\d+)\]/gm)].map((m) => Number(m[1]));
-  out({ suggestions: ps.length && ts.length ? [{ person_id: ps[0], target_id: ts[0], reason: 'Played on the same bill as their A&R last year', confidence: 'medium' }] : [] });
+  await out({ suggestions: ps.length && ts.length ? [{ person_id: ps[0], target_id: ts[0], reason: 'Played on the same bill as their A&R last year', confidence: 'medium' }] : [] });
 }
 
 console.log(JSON.stringify({ type: 'result', is_error: true, result: `fake-claude: unknown task (${props.join(',')})` }));

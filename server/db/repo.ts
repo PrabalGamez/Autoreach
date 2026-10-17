@@ -16,12 +16,20 @@ export function getProfile(): Profile {
     voice_profile: parseJson(r.voice_profile, null),
     sender_email: r.sender_email,
     postal_address: r.postal_address ?? '',
+    artist_context: parseJson(r.artist_context, null),
+    context_at: r.context_at ?? null,
+    context_skipped_at: r.context_skipped_at ?? null,
     onboarded_at: r.onboarded_at,
   };
 }
 
-const PROFILE_JSON = new Set(['niches', 'links', 'best_works', 'goals', 'voice_samples', 'voice_profile']);
-const PROFILE_COLS = new Set(['alias', 'real_name', 'pitch', 'sender_email', 'postal_address', 'onboarded_at', ...PROFILE_JSON]);
+/** Profile has what the artist-context research needs. */
+export function profileComplete(p = getProfile()) {
+  return Boolean(p.alias && p.pitch && p.best_works.length);
+}
+
+const PROFILE_JSON = new Set(['niches', 'links', 'best_works', 'goals', 'voice_samples', 'voice_profile', 'artist_context']);
+const PROFILE_COLS = new Set(['alias', 'real_name', 'pitch', 'sender_email', 'postal_address', 'onboarded_at', 'context_at', 'context_skipped_at', ...PROFILE_JSON]);
 
 export function saveProfile(patch: Partial<Profile>) {
   const entries = Object.entries(patch).filter(([k]) => PROFILE_COLS.has(k));

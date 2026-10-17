@@ -20,6 +20,34 @@ export interface RunOptions<T extends z.ZodType> {
   tools?: string[];
   maxTurns?: number;
   timeoutMs?: number;
+  /** Live activity (web searches, page reads). Switches the CLI to stream-json output. */
+  onActivity?: (a: ClaudeActivity) => void;
+}
+
+export interface ClaudeActivity {
+  kind: 'search' | 'fetch' | 'tool';
+  text: string;
+  at: string;
+}
+
+/** Turn one stream-json line into user-facing activity, or null. */
+export function parseActivity(line: string): ClaudeActivity[] {
+  let evt: { type?: string; message?: { content?: { type: string; name?: string; input?: Record<string, unknown> }[] } };
+  try {
+    evt = JSON.parse(line);
+  } catch {
+    return [];
+  }
+  if (evt.type !== 'assistant') return [];
+  const at = new Date().toISOString();
+  const out: ClaudeActivity[] = [];
+  for (const c of evt.message?.content ?? []) {
+    if (c.type !== 'tool_use') continue;
+    if (c.name === 'WebSearch' && typeof c.input?.query === 'string') out.push({ kind: 'search', text: c.input.query, at });
+    else if (c.name === 'WebFetch' && typeof c.input?.url === 'string') out.push({ kind: 'fetch', text: c.input.url, at });
+    else if (c.name) out.push({ kind: 'tool', text: c.name, at });
+  }
+  return out;
 }
 
 const AUTH_PATTERNS = [
@@ -81,11 +109,24 @@ interface CliResult {
   subtype?: string;
 }
 
-export function spawnClaude(args: string[], stdin: string, timeoutMs: number): Promise<{ code: number | null; stdout: string; stderr: string }> {
+export function spawnClaude(
+  args: string[],
+  stdin: string,
+  timeoutMs: number,
+  onLine?: (line: string) => void,
+): Promise<{ code: number | null; stdout: string; stderr: string }> {
   return new Promise((resolve, reject) => {
     const child = spawn(CLAUDE_BIN, args, { cwd: sandbox(), env: childEnv(), stdio: ['pipe', 'pipe', 'pipe'] });
     let stdout = '';
     let stderr = '';
+    let partial = '';
+    if (onLine)
+      child.stdout.on('data', (d) => {
+        partial += d;
+        const lines = partial.split('\n');
+        partial = lines.pop() ?? '';
+        for (const l of lines) if (l.trim()) onLine(l);
+      });
     const timer = setTimeout(() => {
       child.kill('SIGTERM');
       reject(new ClaudeTaskError(`Timed out after ${Math.round(timeoutMs / 1000)}s`));
@@ -103,6 +144,12 @@ export function spawnClaude(args: string[], stdin: string, timeoutMs: number): P
     });
     child.stdin.end(stdin);
   });
+}
+
+/** The final result object: the only line in json mode, the "type":"result" line in stream-json mode. */
+export function resultLine(stdout: string): string {
+  const lines = stdout.trim().split('\n').filter(Boolean);
+  return [...lines].reverse().find((l) => l.includes('"type":"result"')) ?? lines.pop() ?? '{}';
 }
 
 function extractJson(text: string): unknown {
@@ -130,9 +177,10 @@ export async function runClaude<T extends z.ZodType>(opts: RunOptions<T>): Promi
     const started = Date.now();
     const jsonSchema = cliSchema(opts.schema);
     const tools = opts.tools ?? [];
+    const streaming = Boolean(opts.onActivity);
     const args = [
       '-p',
-      '--output-format', 'json',
+      ...(streaming ? ['--output-format', 'stream-json', '--verbose'] : ['--output-format', 'json']),
       '--no-session-persistence',
       '--model', opts.model,
       '--max-turns', String(opts.maxTurns ?? 3),
@@ -149,7 +197,7 @@ export async function runClaude<T extends z.ZodType>(opts: RunOptions<T>): Promi
       const prompt = attempt === 0 ? opts.prompt : `${opts.prompt}\n\nYour previous answer failed validation: ${lastError}\nReturn corrected JSON only.`;
       let out;
       try {
-        out = await spawnClaude(args, prompt, opts.timeoutMs ?? 90_000);
+        out = await spawnClaude(args, prompt, opts.timeoutMs ?? 90_000, streaming ? (l) => parseActivity(l).forEach((a) => opts.onActivity!(a)) : undefined);
       } catch (err) {
         const msg = (err as Error).message;
         finish('failed', Date.now() - started, undefined, msg);
@@ -158,7 +206,7 @@ export async function runClaude<T extends z.ZodType>(opts: RunOptions<T>): Promi
       }
       let parsed: CliResult;
       try {
-        parsed = JSON.parse(out.stdout.trim().split('\n').filter(Boolean).pop() ?? '{}');
+        parsed = JSON.parse(resultLine(out.stdout));
       } catch {
         const msg = (out.stderr || out.stdout || `claude exited with code ${out.code}`).slice(0, 400);
         if (AUTH_PATTERNS.some((p) => p.test(msg))) {

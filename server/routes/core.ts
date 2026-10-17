@@ -2,8 +2,9 @@ import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import { FAKE_GMAIL, ORIGIN } from '../config.ts';
 import { getDb, getSettings, saveSettings, pauseInfo, unpause, getState, setState, DEFAULT_SETTINGS } from '../db/index.ts';
-import { getProfile, saveProfile } from '../db/repo.ts';
-import { cachedClaudeHealth, checkClaude } from '../claude/health.ts';
+import { getProfile, profileComplete, saveProfile } from '../db/repo.ts';
+import { cachedClaudeHealth, checkClaude, claudeCheckState, ensureClaudeChecked } from '../claude/health.ts';
+import { contextJob, hasContext, skipContext, startContextJob } from '../artistContext.ts';
 import { queueDepth } from '../claude/runner.ts';
 import { extractVoice } from '../claude/tasks.ts';
 import { buildAuthUrl, disconnect, handleCallback, hasClient, isConnected, saveClient } from '../gmail/oauth.ts';
@@ -29,11 +30,17 @@ const ProfileBody = z.object({
 
 export function healthPayload(): Health {
   const gmailErr = getState('gmail_error');
+  const p = getProfile();
   return {
     claude: cachedClaudeHealth(),
-    gmail: { connected: isConnected(), email: getProfile().sender_email, hasClient: hasClient(), error: gmailErr },
+    gmail: { connected: isConnected(), email: p.sender_email, hasClient: hasClient(), error: gmailErr },
     paused: pauseInfo(),
-    onboarded: Boolean(getProfile().onboarded_at),
+    onboarded: Boolean(p.onboarded_at),
+    claudeCheck: claudeCheckState(),
+    profileComplete: profileComplete(p),
+    hasContext: hasContext(),
+    contextSkipped: Boolean(p.context_skipped_at),
+    contextJob: contextJob(),
     jobs: queueDepth(),
     pendingOffers: pendingAlerts().length,
     queue: queueStats(),
@@ -44,15 +51,32 @@ export function healthPayload(): Health {
 export async function coreRoutes(app: FastifyInstance) {
   app.get('/api/ping', async () => ({ app: 'autoreach', ok: true }));
 
+  /** Never blocks: the UI shows "Connecting to Claude Code" while claudeCheck.checking is true. */
   app.get('/api/health', async () => {
-    if (!cachedClaudeHealth()) await checkClaude();
+    ensureClaudeChecked();
     return healthPayload();
   });
 
+  /** "Check again" from the blocking screen. Runs in the background; lifts a Claude-caused pause on success. */
   app.post('/api/health/recheck', async () => {
-    const h = await checkClaude(true);
-    // The person fixed the login from the blocking screen: lift a pause that Claude Code caused.
-    if (h.ok && pauseInfo().reason?.startsWith('Claude Code')) unpause();
+    void checkClaude(true, { liftPause: true });
+    return healthPayload();
+  });
+
+  // ---- artist context ----
+  app.get('/api/artist-context', async () => {
+    const p = getProfile();
+    return { hasContext: hasContext(), context: p.artist_context, contextAt: p.context_at, skipped: Boolean(p.context_skipped_at), job: contextJob() };
+  });
+  app.post('/api/artist-context/build', async (req, reply) => {
+    if (!cachedClaudeHealth()?.ok) return reply.code(409).send({ error: 'Claude Code is not connected yet.' });
+    const { note } = z.object({ note: z.string().max(400).optional() }).parse(req.body ?? {});
+    const r = startContextJob(note || undefined);
+    if (!r.started && r.reason !== 'Already running') return reply.code(400).send({ error: r.reason });
+    return { job: contextJob() };
+  });
+  app.post('/api/artist-context/skip', async () => {
+    skipContext();
     return healthPayload();
   });
 

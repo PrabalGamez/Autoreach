@@ -13,6 +13,9 @@ CREATE TABLE IF NOT EXISTS profile (
   voice_profile TEXT,                         -- JSON {tone,length,greeting,signoff,traits[]}
   sender_email TEXT,
   postal_address TEXT NOT NULL DEFAULT '',
+  artist_context TEXT,                        -- JSON, Claude's research on the artist
+  context_at TEXT,
+  context_skipped_at TEXT,
   onboarded_at TEXT,
   updated_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
