@@ -41,13 +41,11 @@ export function Onboarding({ health, onHealth, onDone }: { health: Health; onHea
             <p className="label">
               Step {step + 1} of {STEPS.length}
             </p>
-            <AnimatePresence mode="wait">
-              <motion.h1 key={step} initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ duration: 0.3 }} className="display mt-3 text-[48px] md:text-[72px]">
+            <motion.h1 key={step} initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }} className="display mt-3 text-[48px] md:text-[72px]">
                 <span className="text-ink">{titles[step][0]}</span>
                 <br />
                 <span className="text-hush">{titles[step][1]}</span>
               </motion.h1>
-            </AnimatePresence>
             <ol className="mt-10 grid max-w-[360px] gap-2">
               {STEPS.map((s, i) => (
                 <li key={s}>
@@ -66,14 +64,13 @@ export function Onboarding({ health, onHealth, onDone }: { health: Health; onHea
         </div>
 
         <div className="lg:pt-24">
-          <AnimatePresence mode="wait">
-            <motion.div key={step} initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -12 }} transition={{ duration: 0.3 }}>
+          {/* Enter-only: the next step renders at once, so a stalled exit animation can never block a button. */}
+          <motion.div key={step} initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
               {profile.data && step === 0 && <ProfileStep profile={profile.data} onSaved={(p) => (profile.setData(p), setStep(1), onHealth())} />}
               {profile.data && step === 1 && <VoiceStep profile={profile.data} onSaved={(p) => (profile.setData(p), setStep(2))} onSkip={() => setStep(2)} />}
               {step === 2 && <GmailStep health={health} onHealth={onHealth} onNext={() => setStep(3)} />}
               {step === 3 && <TargetsStep onDone={onDone} />}
-            </motion.div>
-          </AnimatePresence>
+          </motion.div>
         </div>
       </div>
     </div>

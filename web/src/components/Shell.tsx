@@ -85,11 +85,10 @@ export function Shell({ route, go, health, onHealth, children }: { route: Route;
       </header>
 
       <main className="mx-auto max-w-[1400px] px-4 pb-24 pt-6 md:px-6 md:pt-10">
-        <AnimatePresence mode="wait" initial={false}>
-          <motion.div key={route} initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} transition={{ duration: 0.22, ease: [0.2, 0.7, 0.2, 1] }}>
-            {children}
-          </motion.div>
-        </AnimatePresence>
+        {/* Enter-only page transition: the new page renders at once and fades in. */}
+        <motion.div key={route} initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.22, ease: [0.2, 0.7, 0.2, 1] }}>
+          {children}
+        </motion.div>
       </main>
     </div>
   );

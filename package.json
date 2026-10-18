@@ -1,6 +1,6 @@
 {
   "name": "autoreach",
-  "version": "0.3.2",
+  "version": "0.3.3",
   "private": true,
   "description": "Local outreach app for independent creators, powered by your Claude Code install.",
   "type": "module",
