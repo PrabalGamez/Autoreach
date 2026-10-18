@@ -23,6 +23,13 @@ describe('stage 2: onboarding + Gmail', () => {
     expect(r.status).toBe(400);
   });
 
+  it('saves a profile with no works (works are optional)', async () => {
+    const r = await ctx.call('PUT', '/api/profile', { alias: 'Sam', pitch: 'Makes things', goals: ['deal'], best_works: [] });
+    expect(r.status).toBe(200);
+    const h = await ctx.call('GET', '/api/health');
+    expect(h.body.profileComplete).toBe(true);
+  });
+
   it('extracts a voice profile from samples', async () => {
     const r = await ctx.call('POST', '/api/profile/voice', { samples: ['Hey Sam, thanks for the quick reply last week. I tightened the drop like you said and it hits way harder now. Cheers, P'] });
     expect(r.status).toBe(200);

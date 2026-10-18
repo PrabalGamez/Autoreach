@@ -25,7 +25,7 @@ const ProfileBody = z.object({
   pitch: z.string().min(5).max(200),
   niches: z.array(z.string().max(40)).min(1).max(10),
   links: z.array(Link).max(8),
-  best_works: z.array(Work).min(1).max(3),
+  best_works: z.array(Work).max(3),
   goals: z.array(z.string()).min(1).transform((g) => normalizeGoals(g)).pipe(z.array(z.enum(GOALS)).min(1, 'Pick at least one goal')),
   postal_address: z.string().max(300).default(''),
 }).partial();
@@ -114,7 +114,7 @@ export async function coreRoutes(app: FastifyInstance) {
 
   app.post('/api/onboarding/complete', async (_req, reply) => {
     const p = getProfile();
-    if (!p.alias || !p.pitch || !p.best_works.length) return reply.code(400).send({ error: 'Finish your profile first.' });
+    if (!p.alias || !p.pitch) return reply.code(400).send({ error: 'Finish your profile first.' });
     if (!isConnected()) return reply.code(400).send({ error: 'Connect Gmail first.' });
     return saveProfile({ onboarded_at: new Date().toISOString() });
   });

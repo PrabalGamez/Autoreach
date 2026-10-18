@@ -1,6 +1,6 @@
 {
   "name": "autoreach",
-  "version": "0.3.1",
+  "version": "0.3.2",
   "description": "Research, draft, review and send personal outreach emails to companies, brands and people in any field. Runs locally through your Claude Code login.",
   "author": {
     "name": "Prabal"

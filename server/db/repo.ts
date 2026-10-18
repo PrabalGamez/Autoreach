@@ -43,7 +43,7 @@ export function normalizeContext(raw: Record<string, unknown> | null): ProfileCo
 
 /** Profile has what the context research needs. */
 export function profileComplete(p = getProfile()) {
-  return Boolean(p.alias && p.pitch && p.best_works.length);
+  return Boolean(p.alias && p.pitch);
 }
 
 const PROFILE_JSON = new Set(['niches', 'links', 'best_works', 'goals', 'voice_samples', 'voice_profile', 'profile_context']);

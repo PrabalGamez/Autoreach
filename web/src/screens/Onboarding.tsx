@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Check, ExternalLink, Mail, Plus, Trash2 } from 'lucide-react';
+import { Check, ExternalLink, Mail, Plus, Trash2, X } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { GOALS, type Health, type Profile } from '../../../shared/types.ts';
 import { Button, Input, Label, LogoPill, TextArea, cx, useToast } from '../components/ui.tsx';
@@ -17,7 +17,7 @@ export function Onboarding({ health, onHealth, onDone }: { health: Health; onHea
     const p = profile.data;
     if (!p) return;
     // Resume where the person left off. Voice is optional, so a set Gmail address means it was done or skipped.
-    if (p.alias && p.best_works.length) setStep((s) => Math.max(s, health.gmail.connected ? 3 : p.voice_profile ? 2 : 1));
+    if (p.alias && p.pitch) setStep((s) => Math.max(s, health.gmail.connected ? 3 : p.voice_profile ? 2 : 1));
   }, [profile.data]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
@@ -89,7 +89,7 @@ function ProfileStep({ profile, onSaved }: { profile: Profile; onSaved: (p: Prof
     pitch: profile.pitch,
     niches: profile.niches.join(', '),
     links: profile.links.length ? profile.links : [{ label: 'Website', url: '' }, { label: 'Portfolio', url: '' }, { label: 'LinkedIn', url: '' }],
-    works: profile.best_works.length ? profile.best_works : [{ title: '', url: '', note: '' }],
+    works: profile.best_works,
     goals: profile.goals,
   });
   const [busy, setBusy] = useState(false);
@@ -160,20 +160,40 @@ function ProfileStep({ profile, onSaved }: { profile: Profile; onSaved: (p: Prof
       </fieldset>
       <fieldset>
         <legend className="mb-1.5 text-[14px] font-medium text-ink-2">
-          Your 2–3 best works <span className="font-normal text-ink-3">private links are fine</span>
+          Best work <span className="font-normal text-ink-3">optional</span>
         </legend>
         <div className="grid gap-3">
-          {f.works.map((w, i) => (
-            <div key={i} className="grid gap-2 rounded-[4px] bg-ground-2 p-3 shadow-[inset_0_0_0_1px_var(--color-line)] sm:grid-cols-2">
-              <Input aria-label="Title" placeholder="Title" value={w.title} onChange={(e) => set('works', f.works.map((x, j) => (j === i ? { ...x, title: e.target.value } : x)))} />
-              <Input aria-label="URL" type="url" placeholder="https://…" value={w.url} onChange={(e) => set('works', f.works.map((x, j) => (j === i ? { ...x, url: e.target.value } : x)))} />
-              <Input aria-label="Note" className="sm:col-span-2" placeholder="Note, e.g. client, result, date, or why it matters" value={w.note} onChange={(e) => set('works', f.works.map((x, j) => (j === i ? { ...x, note: e.target.value } : x)))} />
-            </div>
-          ))}
-          {f.works.length < 3 && (
+          <AnimatePresence initial={false}>
+            {f.works.map((w, i) => (
+              <motion.div key={i} initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, height: 0 }} transition={{ duration: 0.18 }} className="relative grid gap-2 rounded-[4px] bg-ground-2 p-3 pr-12 shadow-[inset_0_0_0_1px_var(--color-line)] sm:grid-cols-2">
+                <Input aria-label="Title" placeholder="Title" value={w.title} onChange={(e) => set('works', f.works.map((x, j) => (j === i ? { ...x, title: e.target.value } : x)))} />
+                <Input aria-label="URL" type="url" placeholder="https://…" value={w.url} onChange={(e) => set('works', f.works.map((x, j) => (j === i ? { ...x, url: e.target.value } : x)))} />
+                <Input aria-label="Note" className="sm:col-span-2" placeholder="Note, e.g. client, result, date, or why it matters" value={w.note} onChange={(e) => set('works', f.works.map((x, j) => (j === i ? { ...x, note: e.target.value } : x)))} />
+                <button type="button" aria-label="Remove this work" className="absolute right-2 top-2 grid size-9 place-items-center rounded-[4px] text-ink-3 hover:bg-black/5 hover:text-ink" onClick={() => set('works', f.works.filter((_, j) => j !== i))}>
+                  <X className="size-4" />
+                </button>
+              </motion.div>
+            ))}
+          </AnimatePresence>
+          {f.works.length > 0 && f.works.length < 3 && (
             <Button variant="ghost" size="sm" className="justify-self-start" icon={<Plus className="size-4" />} onClick={() => set('works', [...f.works, { title: '', url: '', note: '' }])}>
-              Add work
+              Add another
             </Button>
+          )}
+          {f.works.length === 0 && (
+            <button
+              type="button"
+              onClick={() => set('works', [...f.works, { title: '', url: '', note: '' }])}
+              className="group flex items-center gap-3 rounded-[4px] border border-dashed border-line-strong px-4 py-3.5 text-left transition-colors duration-150 hover:border-forest hover:bg-ground-2"
+            >
+              <span className="grid size-8 shrink-0 place-items-center rounded-full bg-lime text-forest-2 transition-transform duration-150 group-hover:scale-105">
+                <Plus className="size-4" />
+              </span>
+              <span>
+                <span className="block text-[15px] font-medium text-ink">Add a work you’re proud of</span>
+                <span className="block text-[13px] text-ink-3">A project, release, product or case study. Gives Claude something specific to mention. Private links are fine.</span>
+              </span>
+            </button>
           )}
         </div>
       </fieldset>
@@ -191,7 +211,7 @@ function ProfileStep({ profile, onSaved }: { profile: Profile; onSaved: (p: Prof
         </div>
       </fieldset>
       <div className="flex justify-end">
-        <Button size="lg" onClick={save} busy={busy} disabled={!f.alias || !f.pitch || !f.goals.length || !f.works.some((w) => w.url)}>
+        <Button size="lg" onClick={save} busy={busy} disabled={!f.alias.trim() || !f.pitch.trim() || !f.goals.length}>
           Save and continue
         </Button>
       </div>

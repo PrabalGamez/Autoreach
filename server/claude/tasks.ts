@@ -36,7 +36,7 @@ function profileBlock(p: Profile) {
     `Field / niche: ${p.niches.join(', ')}`,
     `Wants: ${p.goals.join(', ')}`,
     `Links: ${p.links.map((l) => `${l.label}: ${l.url}`).join(' | ')}`,
-    `Best works:\n${p.best_works.map((w) => `- ${w.title} ${w.url}${w.note ? ` (${w.note})` : ''}`).join('\n')}`,
+    p.best_works.length ? `Best works:\n${p.best_works.map((w) => `- ${w.title} ${w.url}${w.note ? ` (${w.note})` : ''}`).join('\n')}` : 'Best works: none given; lean on the pitch, field and links.',
   ];
   const c = p.profile_context;
   if (c) {
