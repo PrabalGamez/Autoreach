@@ -6,7 +6,9 @@ import { PORT, TOKEN_PATH } from './config.ts';
 export const SESSION_COOKIE = 'ar_session';
 
 export function createSessionToken(write = true) {
-  const token = crypto.randomBytes(24).toString('hex');
+  // The launcher may pick the token first so it can open the browser before the server is up.
+  const preset = process.env.AUTOREACH_TOKEN;
+  const token = preset && /^[a-f0-9]{48}$/.test(preset) ? preset : crypto.randomBytes(24).toString('hex');
   if (write) fs.writeFileSync(TOKEN_PATH, token, { mode: 0o600 });
   return token;
 }

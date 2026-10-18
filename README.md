@@ -56,7 +56,7 @@ Restart Claude Code, then run:
 /autoreach
 ```
 
-The first launch installs dependencies and builds the app, which takes about a minute. You need Node 20+ and a signed-in terminal `claude`. If `claude` says you are not logged in, run `claude auth login`; the desktop app's sign-in does not cover the terminal.
+Your browser opens straight away. The very first launch shows a setup page for about 30 seconds while it installs its parts into `~/.autoreach/app`, then switches to the app by itself. You need Node 20+ and a signed-in terminal `claude`. If `claude` says you are not logged in, run `claude auth login`; the desktop app's sign-in does not cover the terminal.
 
 | Command | What it does |
 | --- | --- |
@@ -131,7 +131,7 @@ If you'd rather have Autoreach send on its own (2–6 minutes apart, inside the 
 ```bash
 npm install
 npm test        # 56 tests with a fake `claude` and an in-memory mailbox
-npm run build   # builds the web app into dist/web
+npm run build   # rebuild dist/web before committing; it ships prebuilt so installs skip the build
 npm run demo    # demo on :4748 with fake Claude and fake Gmail
 ```
 
