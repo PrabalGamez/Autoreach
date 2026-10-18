@@ -3,7 +3,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { z } from 'zod';
-import { CLAUDE_BIN } from '../config.ts';
+import { claudeCommand } from './bin.ts';
 import { getDb, pause } from '../db/index.ts';
 
 export class ClaudeAuthError extends Error {}
@@ -116,7 +116,8 @@ export function spawnClaude(
   onLine?: (line: string) => void,
 ): Promise<{ code: number | null; stdout: string; stderr: string }> {
   return new Promise((resolve, reject) => {
-    const child = spawn(CLAUDE_BIN, args, { cwd: sandbox(), env: childEnv(), stdio: ['pipe', 'pipe', 'pipe'] });
+    const { cmd, pre } = claudeCommand();
+    const child = spawn(cmd, [...pre, ...args], { cwd: sandbox(), env: childEnv(), stdio: ['pipe', 'pipe', 'pipe'] });
     let stdout = '';
     let stderr = '';
     let partial = '';

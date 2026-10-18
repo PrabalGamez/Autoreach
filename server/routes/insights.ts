@@ -1,3 +1,4 @@
+import type { SQLInputValue } from 'node:sqlite';
 import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import { DB_PATH, FAKE_GMAIL } from '../config.ts';
@@ -13,7 +14,7 @@ import { healthPayload } from './core.ts';
 
 export function dashboardStats() {
   const db = getDb();
-  const one = <T>(sql: string, ...args: unknown[]) => db.prepare(sql).get(...args) as T;
+  const one = <T>(sql: string, ...args: SQLInputValue[]) => db.prepare(sql).get(...args) as T;
   const sent = one<{ n: number }>("SELECT COUNT(DISTINCT target_id) n FROM messages WHERE channel IN ('gmail','form') AND target_id IS NOT NULL").n;
   const replied = one<{ n: number }>("SELECT COUNT(DISTINCT target_id) n FROM replies WHERE target_id IS NOT NULL AND label IS NOT 'auto_reply'").n;
   const offers = one<{ n: number }>("SELECT COUNT(*) n FROM replies WHERE label = 'offer'").n;

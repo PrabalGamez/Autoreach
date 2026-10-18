@@ -76,7 +76,7 @@ h1{font-size:40px;line-height:1.05;letter-spacing:-.02em;margin:28px 0 10px;font
 ol{list-style:none;padding:0;margin:32px 0 0;display:grid;gap:10px}li{display:flex;gap:12px;align-items:center;background:var(--forest2);border-radius:8px;padding:14px 16px;color:var(--muted)}
 .dot{width:18px;height:18px;border-radius:50%;border:2px solid rgba(236,235,225,.25);flex:none}
 li.on{color:var(--cream)}li.on .dot{border-color:var(--lime);border-top-color:transparent;animation:spin .8s linear infinite}
-li.done{color:var(--cream)}li.done .dot{background:var(--lime);border-color:var(--lime)}
+li.bad{color:var(--cream)}li.bad .dot{background:var(--ember);border-color:var(--ember)}li.done{color:var(--cream)}li.done .dot{background:var(--lime);border-color:var(--lime)}
 .err{display:none;margin-top:24px;background:#2a1410;border:1px solid var(--ember);border-radius:8px;padding:16px}.err b{color:#ffb595}
 pre{white-space:pre-wrap;font:12px/1.5 ui-monospace,Menlo,monospace;color:var(--muted);max-height:220px;overflow:auto;margin:10px 0 0}
 @keyframes spin{to{transform:rotate(360deg)}}@media (prefers-reduced-motion:reduce){li.on .dot{animation:none;border-top-color:var(--lime)}}
@@ -97,7 +97,7 @@ async function tick(){
     const r=await fetch('/api/ping',{cache:'no-store'});const j=await r.json();
     if(j.app==='autoreach'){location.reload();return}
     const i=order.indexOf(j.step);
-    document.querySelectorAll('#steps li').forEach((li,k)=>{li.className=k<i?'done':k===i&&!j.error?'on':''});
+    document.querySelectorAll('#steps li').forEach((li,k)=>{li.className=k<i?'done':k===i?(j.error?'bad':'on'):''});
     if(j.error){document.getElementById('err').style.display='block';document.getElementById('msg').textContent=j.error;document.getElementById('log').textContent=j.detail||'';return}
   }catch(e){/* server switching over */}
   setTimeout(tick,800);
@@ -128,8 +128,11 @@ function npmInstall() {
   return new Promise((resolve, reject) => {
     const out = fs.openSync(bootLog, 'a');
     const args = ['ci', '--omit=dev', '--no-audit', '--no-fund', '--loglevel=error', '--update-notifier=false', '--cache', path.join(HOME, 'npm-cache')];
-    const child = spawn(isWin ? 'npm.cmd' : 'npm', args, { cwd: RUNTIME, stdio: ['ignore', out, out], shell: isWin });
-    child.on('error', () => reject(new Error('npm was not found. Install Node.js 20 or newer from nodejs.org, then run /autoreach again.')));
+    // On Windows, run npm's own script with Node: no cmd.exe, so paths with spaces stay intact.
+    const npmCli = path.join(path.dirname(process.execPath), 'node_modules', 'npm', 'bin', 'npm-cli.js');
+    const [cmd, argv] = isWin && fs.existsSync(npmCli) ? [process.execPath, [npmCli, ...args]] : [isWin ? 'npm.cmd' : 'npm', args];
+    const child = spawn(cmd, argv, { cwd: RUNTIME, stdio: ['ignore', out, out], shell: isWin && cmd !== process.execPath });
+    child.on('error', () => reject(new Error('npm was not found. Install Node.js 22.13 or newer from nodejs.org, then run /autoreach again.')));
     child.on('exit', (code) => (code === 0 ? resolve() : reject(new Error(`Installing dependencies failed (npm exit ${code}).`))));
   });
 }
@@ -147,7 +150,7 @@ async function startServer(root) {
   const serverLog = path.join(LOGS, 'server.out');
   const out = fs.openSync(serverLog, 'a');
   const tsx = path.join(root, 'node_modules', 'tsx', 'dist', 'esm', 'index.mjs');
-  const child = spawn(process.execPath, ['--import', tsx, path.join(root, 'server', 'index.ts')], {
+  const child = spawn(process.execPath, ['--disable-warning=ExperimentalWarning', '--import', tsx, path.join(root, 'server', 'index.ts')], {
     cwd: root,
     detached: true,
     stdio: ['ignore', out, out],
@@ -163,7 +166,24 @@ async function startServer(root) {
   throw Object.assign(new Error('The app did not start.'), { detail: tail(serverLog) });
 }
 
+/** The app stores data with Node's built-in SQLite (nothing to compile), which needs Node 22.13+. */
+async function nodeTooOld() {
+  try {
+    await import('node:sqlite');
+    return null;
+  } catch {
+    return `Autoreach needs Node.js 22.13 or newer, and this computer has ${process.version}. Install the LTS version from nodejs.org, then run /autoreach again.`;
+  }
+}
+
 async function main() {
+  const old = await nodeTooOld();
+  if (old) {
+    state.error = old;
+    await setupServer();
+    setTimeout(() => process.exit(1), 10 * 60_000);
+    return;
+  }
   const dev = devRoot();
   if (dev) {
     if (!fs.existsSync(path.join(dev, 'dist', 'web', 'index.html'))) spawnSync(isWin ? 'npm.cmd' : 'npm', ['run', 'build'], { cwd: dev, stdio: 'ignore', shell: isWin });
@@ -194,6 +214,7 @@ async function main() {
   } catch (e) {
     log(`failed: ${e.message}`);
     state.error = e.message;
+    if (/gyp|python|Visual Studio/i.test(tail(bootLog, 200))) state.error += ' A part tried to compile from source. Update Node.js to the latest LTS from nodejs.org, then run /autoreach again.';
     state.detail = e.detail ?? tail(bootLog);
     // Keep explaining the failure for a while, unless the port is already free again.
     if (!srv.listening) await setupServer().catch(() => null);

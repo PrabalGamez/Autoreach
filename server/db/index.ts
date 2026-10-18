@@ -1,18 +1,19 @@
-import Database from 'better-sqlite3';
+import { DatabaseSync } from 'node:sqlite';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { DB_PATH, ensureHome, HARD_DAILY_CAP } from '../config.ts';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
-let db: Database.Database | null = null;
+let db: DatabaseSync | null = null;
 
-export function openDb(file = DB_PATH): Database.Database {
+export function openDb(file = DB_PATH): DatabaseSync {
   if (db) return db;
   if (file !== ':memory:') ensureHome();
-  db = new Database(file);
-  db.pragma('journal_mode = WAL');
-  db.pragma('foreign_keys = ON');
+  // Node's built-in SQLite: nothing native to compile on install, on any OS.
+  db = new DatabaseSync(file);
+  db.exec('PRAGMA journal_mode = WAL');
+  db.exec('PRAGMA foreign_keys = ON');
   db.exec(fs.readFileSync(path.join(here, 'schema.sql'), 'utf8'));
   migrate(db);
   return db;
@@ -22,23 +23,29 @@ export function openDb(file = DB_PATH): Database.Database {
  * v0.1 target kinds were label/brand/collaborator/other. SQLite cannot change a CHECK constraint,
  * so the table is rebuilt from schema.sql with label -> company and collaborator -> person.
  */
-function migrateTargetKinds(d: Database.Database) {
+function migrateTargetKinds(d: DatabaseSync) {
   const row = d.prepare("SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'targets'").get() as { sql: string } | undefined;
   if (!row || !row.sql.includes("'label'")) return;
   const schema = fs.readFileSync(path.join(here, 'schema.sql'), 'utf8');
   const ddl = schema.match(/CREATE TABLE IF NOT EXISTS targets \(([\s\S]*?)\n\);/)![0].replace('CREATE TABLE IF NOT EXISTS targets', 'CREATE TABLE targets_new');
   const cols = (d.prepare('PRAGMA table_info(targets)').all() as { name: string }[]).map((c) => c.name);
   const select = cols.map((c) => (c === 'kind' ? "CASE kind WHEN 'label' THEN 'company' WHEN 'collaborator' THEN 'person' ELSE kind END" : c)).join(', ');
-  d.pragma('foreign_keys = OFF');
-  d.transaction(() => {
+  d.exec('PRAGMA foreign_keys = OFF');
+  d.exec('BEGIN');
+  try {
     d.exec(ddl);
     d.exec(`INSERT INTO targets_new (${cols.join(', ')}) SELECT ${select} FROM targets`);
     d.exec('DROP TABLE targets');
     d.exec('ALTER TABLE targets_new RENAME TO targets');
     d.exec('CREATE UNIQUE INDEX IF NOT EXISTS ux_target_email ON targets(lower(contact_email)) WHERE contact_email IS NOT NULL');
     d.exec('CREATE UNIQUE INDEX IF NOT EXISTS ux_target_domain ON targets(lower(domain)) WHERE domain IS NOT NULL');
-  })();
-  d.pragma('foreign_keys = ON');
+    d.exec('COMMIT');
+  } catch (e) {
+    d.exec('ROLLBACK');
+    throw e;
+  } finally {
+    d.exec('PRAGMA foreign_keys = ON');
+  }
 }
 
 /** Columns added after the first release. CREATE TABLE IF NOT EXISTS does not add them to old databases. */
@@ -47,7 +54,7 @@ const ADDED_COLUMNS: [table: string, column: string, ddl: string][] = [
   ['profile', 'context_at', 'TEXT'],
   ['profile', 'context_skipped_at', 'TEXT'],
 ];
-export function migrate(d: Database.Database) {
+export function migrate(d: DatabaseSync) {
   const profileCols = (d.prepare('PRAGMA table_info(profile)').all() as { name: string }[]).map((c) => c.name);
   // v0.1 was music-only: artist_context became profile_context.
   if (profileCols.includes('artist_context') && !profileCols.includes('profile_context')) d.exec('ALTER TABLE profile RENAME COLUMN artist_context TO profile_context');
@@ -58,7 +65,7 @@ export function migrate(d: Database.Database) {
   }
 }
 
-export function getDb(): Database.Database {
+export function getDb(): DatabaseSync {
   return db ?? openDb();
 }
 

@@ -1,3 +1,4 @@
+import type { SQLInputValue } from 'node:sqlite';
 import { getDb, parseJson, nowIso } from './index.ts';
 import { GOALS, type Brief, type Draft, type Goal, type Person, type Profile, type ProfileContext, type Target, type TargetStatus } from '../../shared/types.ts';
 
@@ -52,7 +53,7 @@ export function saveProfile(patch: Partial<Profile>) {
   const entries = Object.entries(patch).filter(([k]) => PROFILE_COLS.has(k));
   if (!entries.length) return getProfile();
   const sets = entries.map(([k]) => `${k} = @${k}`).join(', ');
-  const params = Object.fromEntries(entries.map(([k, v]) => [k, PROFILE_JSON.has(k) ? JSON.stringify(v) : v]));
+  const params = Object.fromEntries(entries.map(([k, v]) => [k, PROFILE_JSON.has(k) ? JSON.stringify(v) : v])) as Record<string, SQLInputValue>;
   getDb().prepare(`UPDATE profile SET ${sets}, updated_at = datetime('now') WHERE id = 1`).run(params);
   return getProfile();
 }
@@ -253,7 +254,7 @@ export function otherDraftBodies(excludeTargetId: number | null, limit = 40): st
 
 // ---------- people ----------
 export function listPeople(): Person[] {
-  return getDb().prepare('SELECT id, name, email, relationship, notes FROM people ORDER BY name').all() as Person[];
+  return getDb().prepare('SELECT id, name, email, relationship, notes FROM people ORDER BY name').all() as unknown as Person[];
 }
 export function getPerson(id: number): Person | null {
   return (getDb().prepare('SELECT id, name, email, relationship, notes FROM people WHERE id = ?').get(id) as Person | undefined) ?? null;

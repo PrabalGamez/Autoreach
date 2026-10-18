@@ -35,7 +35,7 @@ async function api(p, init = {}) {
 }
 
 function claudeInstalled() {
-  const r = spawnSync('claude', ['--version'], { encoding: 'utf8' });
+  const r = spawnSync('claude', ['--version'], { encoding: 'utf8', shell: process.platform === 'win32' });
   return r.status === 0 ? r.stdout.trim() : null;
 }
 

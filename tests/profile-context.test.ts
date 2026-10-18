@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import Database from 'better-sqlite3';
+import { DatabaseSync as Database } from 'node:sqlite';
 import { makeApp, onboard, waitFor } from './helpers.ts';
 import { migrate } from '../server/db/index.ts';
 import { parseActivity, resultLine } from '../server/claude/runner.ts';

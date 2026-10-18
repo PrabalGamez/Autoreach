@@ -19,7 +19,7 @@ You review every draft like a flashcard, it opens in your Gmail, and you press S
   <img alt="Runs on Claude Code" src="https://img.shields.io/badge/runs_on-Claude_Code-D97757?logo=claude&logoColor=white">
   <img alt="Local-first" src="https://img.shields.io/badge/data-stays_on_your_Mac-142A1E">
   <img alt="No API key" src="https://img.shields.io/badge/API_key-not_needed-142A1E">
-  <img alt="Node 20+" src="https://img.shields.io/badge/node-20%2B-142A1E?logo=nodedotjs&logoColor=white">
+  <img alt="Node 22.13+" src="https://img.shields.io/badge/node-22.13%2B-142A1E?logo=nodedotjs&logoColor=white">
   <img alt="Tests" src="https://img.shields.io/badge/tests-56_passing-9FE870?labelColor=142A1E">
 </p>
 
@@ -56,7 +56,7 @@ Restart Claude Code, then run:
 /autoreach
 ```
 
-Your browser opens straight away. The very first launch shows a setup page for about 30 seconds while it installs its parts into `~/.autoreach/app`, then switches to the app by itself. You need Node 20+ and a signed-in terminal `claude`. If `claude` says you are not logged in, run `claude auth login`; the desktop app's sign-in does not cover the terminal.
+Your browser opens straight away. The very first launch shows a setup page for about 30 seconds while it installs its parts into `~/.autoreach/app`, then switches to the app by itself. You need Node.js 22.13 or newer (macOS, Windows or Linux) and a signed-in terminal `claude`. If `claude` says you are not logged in, run `claude auth login`; the desktop app's sign-in does not cover the terminal.
 
 | Command | What it does |
 | --- | --- |
